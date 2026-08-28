@@ -128,3 +128,143 @@ WHERE NOT EXISTS (
       AND c.cycle_end_day BETWEEN so.start_day_offset AND so.end_day_offset
 )
 GROUP BY c.episode_id, c.billing_cycle_index;
+
+-- Stage 4 (dimensional decomposition) sliced billing_system views. billing_system is
+-- the one source already exact/ground-truth-equivalent for revenue and active_customers
+-- (no second source has a region/segment/product breakdown to reconcile against -- see
+-- .claude/plans/stage4-dimensional-decomposition.md), so these read the same way the
+-- un-sliced billing views do, just grouped by one more real dimension column.
+--
+-- Every (day_offset, slice_value) pair is scaffolded explicitly (day source x real
+-- distinct slice values, LEFT JOINed to orders, COALESCEd to 0) so a slice-day with no
+-- orders reports revenue=0/active_customers=0 -- a real observation -- rather than a
+-- missing row that would wrongly look like a data gap to Stage 2's eligibility gate.
+-- The un-sliced views never needed this because "zero orders company-wide on a day"
+-- essentially never happens at this dataset's scale; "zero orders for one small region
+-- on a day" is common. Same whole-day billing outage suppression as the un-sliced views
+-- -- there's no slice-level outage concept in Layer 1's schema.
+
+CREATE OR REPLACE VIEW v_billing_daily_revenue_by_region AS
+WITH regions AS (
+    SELECT DISTINCT episode_id, region FROM customers
+),
+order_region AS (
+    SELECT o.episode_id, o.day_offset, c.region, o.quantity, o.unit_price
+    FROM orders o
+    JOIN customers c ON c.customer_id = o.customer_id
+)
+SELECT d.episode_id, d.day_offset, r.region,
+       COALESCE(SUM(orr.quantity * orr.unit_price), 0) AS revenue,
+       COUNT(orr.region) AS orders_count
+FROM daily_state d
+JOIN regions r ON r.episode_id = d.episode_id
+LEFT JOIN order_region orr
+  ON orr.episode_id = d.episode_id AND orr.day_offset = d.day_offset AND orr.region = r.region
+WHERE NOT EXISTS (
+    SELECT 1 FROM source_outages so
+    WHERE so.episode_id = d.episode_id AND so.source_name = 'billing_system'
+      AND so.metric_name IS NULL
+      AND d.day_offset BETWEEN so.start_day_offset AND so.end_day_offset
+)
+GROUP BY d.episode_id, d.day_offset, r.region;
+
+CREATE OR REPLACE VIEW v_billing_daily_revenue_by_segment AS
+WITH segments AS (
+    SELECT DISTINCT episode_id, segment FROM customers
+),
+order_segment AS (
+    SELECT o.episode_id, o.day_offset, c.segment, o.quantity, o.unit_price
+    FROM orders o
+    JOIN customers c ON c.customer_id = o.customer_id
+)
+SELECT d.episode_id, d.day_offset, s.segment,
+       COALESCE(SUM(os.quantity * os.unit_price), 0) AS revenue,
+       COUNT(os.segment) AS orders_count
+FROM daily_state d
+JOIN segments s ON s.episode_id = d.episode_id
+LEFT JOIN order_segment os
+  ON os.episode_id = d.episode_id AND os.day_offset = d.day_offset AND os.segment = s.segment
+WHERE NOT EXISTS (
+    SELECT 1 FROM source_outages so
+    WHERE so.episode_id = d.episode_id AND so.source_name = 'billing_system'
+      AND so.metric_name IS NULL
+      AND d.day_offset BETWEEN so.start_day_offset AND so.end_day_offset
+)
+GROUP BY d.episode_id, d.day_offset, s.segment;
+
+-- Keyed on products.category (the real Olist taxonomy, 4 distinct/episode) -- no
+-- active_customers_by_product view exists: a customer isn't tied to one product, so
+-- active_customers_purchased_30d only ever gets region/segment breakdowns
+-- (dimension_config.py's DIMENSION_APPLICABILITY encodes this).
+CREATE OR REPLACE VIEW v_billing_daily_revenue_by_product AS
+WITH categories AS (
+    SELECT DISTINCT episode_id, category FROM products
+),
+order_category AS (
+    SELECT o.episode_id, o.day_offset, p.category, o.quantity, o.unit_price
+    FROM orders o
+    JOIN products p ON p.product_id = o.product_id
+)
+SELECT d.episode_id, d.day_offset, c.category,
+       COALESCE(SUM(oc.quantity * oc.unit_price), 0) AS revenue,
+       COUNT(oc.category) AS orders_count
+FROM daily_state d
+JOIN categories c ON c.episode_id = d.episode_id
+LEFT JOIN order_category oc
+  ON oc.episode_id = d.episode_id AND oc.day_offset = d.day_offset AND oc.category = c.category
+WHERE NOT EXISTS (
+    SELECT 1 FROM source_outages so
+    WHERE so.episode_id = d.episode_id AND so.source_name = 'billing_system'
+      AND so.metric_name IS NULL
+      AND d.day_offset BETWEEN so.start_day_offset AND so.end_day_offset
+)
+GROUP BY d.episode_id, d.day_offset, c.category;
+
+-- Same "purchased in trailing 30 days" definition as v_billing_active_customers, sliced.
+CREATE OR REPLACE VIEW v_billing_active_customers_by_region AS
+WITH regions AS (
+    SELECT DISTINCT episode_id, region FROM customers
+),
+order_region AS (
+    SELECT DISTINCT o.episode_id, o.day_offset, c.region, o.customer_id
+    FROM orders o
+    JOIN customers c ON c.customer_id = o.customer_id
+)
+SELECT d.episode_id, d.day_offset, r.region,
+       COUNT(DISTINCT orr.customer_id) AS active_customers
+FROM daily_state d
+JOIN regions r ON r.episode_id = d.episode_id
+LEFT JOIN order_region orr
+  ON orr.episode_id = d.episode_id AND orr.region = r.region
+  AND orr.day_offset BETWEEN d.day_offset - 30 AND d.day_offset
+WHERE NOT EXISTS (
+    SELECT 1 FROM source_outages so
+    WHERE so.episode_id = d.episode_id AND so.source_name = 'billing_system'
+      AND so.metric_name IS NULL
+      AND d.day_offset BETWEEN so.start_day_offset AND so.end_day_offset
+)
+GROUP BY d.episode_id, d.day_offset, r.region;
+
+CREATE OR REPLACE VIEW v_billing_active_customers_by_segment AS
+WITH segments AS (
+    SELECT DISTINCT episode_id, segment FROM customers
+),
+order_segment AS (
+    SELECT DISTINCT o.episode_id, o.day_offset, c.segment, o.customer_id
+    FROM orders o
+    JOIN customers c ON c.customer_id = o.customer_id
+)
+SELECT d.episode_id, d.day_offset, s.segment,
+       COUNT(DISTINCT os.customer_id) AS active_customers
+FROM daily_state d
+JOIN segments s ON s.episode_id = d.episode_id
+LEFT JOIN order_segment os
+  ON os.episode_id = d.episode_id AND os.segment = s.segment
+  AND os.day_offset BETWEEN d.day_offset - 30 AND d.day_offset
+WHERE NOT EXISTS (
+    SELECT 1 FROM source_outages so
+    WHERE so.episode_id = d.episode_id AND so.source_name = 'billing_system'
+      AND so.metric_name IS NULL
+      AND d.day_offset BETWEEN so.start_day_offset AND so.end_day_offset
+)
+GROUP BY d.episode_id, d.day_offset, s.segment;
