@@ -19,14 +19,14 @@ Current-state summary. For the *why* behind any decision here, the linked design
 |---|---|---|---|
 | Layer 1 ground truth | ✅ | ✅ | 150 episodes live in Neon. Olist-bootstrapped, multi-event episodes, reactive chaining, volatility regimes. |
 | Layer 2 observed sources | ✅ | ✅ | 6 views, 6 of 7 reconciliation scenarios. Scenario 3 (mutable history) deferred — needs a Layer 1 schema extension. |
-| Stage 1 — Reconciliation & Ingestion | ✅ | ❌ | Implementation plan: `.claude/plans/stage1-reconciliation-ingestion.md` |
+| Stage 1 — Reconciliation & Ingestion | ✅ | ✅ (first slice) | Scenarios 1/2/4-partial/5/6 built, `test_reconcile.py` passing offline + live. Scenario 3, 4-total-gap, and Scenario 7 deferred (need Stage 2). See `.claude/plans/stage1-reconciliation-ingestion.md` |
 | Stage 2 — Significance Detection | ✅ | ❌ | Designed on a parallel/teammate track |
 | Stage 3 — Cross-KPI Correlation | ✅ | ❌ | |
 | Stage 4 — Dimensional Decomposition | ✅ (implementation plan ready) | ❌ | Blocked on confirming Stage 2's function interface |
 | Stage 5a–11 | ❌ | ❌ | Not yet designed |
-| KPI Semantic Contract | Partially — specified inside Stage 1's design report §3.1 | ❌ | Not yet its own standalone artifact |
-| Calendar Dimension | Partially — Stage 1's design report §3.2 | ❌ | |
-| Identity Resolution Graph | Partially — Stage 1's design report §3.3 | ❌ | The one genuinely new cross-cutting component from Stage 1's design |
+| KPI Semantic Contract | Partially — specified inside Stage 1's design report §3.1 | ✅ (as `stage01_reconciliation_ingestion/semantic_contract.py`) | Not yet split into its own standalone `pipeline/cross_cutting/` module |
+| Calendar Dimension | Partially — Stage 1's design report §3.2 | ✅ (as `stage01_reconciliation_ingestion/calendar_dimension.py`) | Not yet split out standalone |
+| Identity Resolution Graph | Partially — Stage 1's design report §3.3 | ✅ (as `stage01_reconciliation_ingestion/identity_resolution.py`, single-field scoring only — see plan Risk #2) | The one genuinely new cross-cutting component from Stage 1's design; not yet split out standalone |
 | Security/Decision Rights/Learning & Memory/Telemetry | ❌ | ❌ | Not yet designed |
 | FastAPI backend | Tech-stack decided | ❌ | |
 | Next.js frontend | Tech-stack decided | ❌ | |
