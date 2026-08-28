@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a new feature, pipeline stage, or enhancement.
+labels: ["feature", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user need, graded requirement, or pain point does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "- [ ] \n- [ ] "
+    validations:
+      required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      options: [simulator, stage1-reconciliation, stage2-significance, stage3-correlation, stage4-decomposition, stage5-fingerprint, stage6-evidence, stage7-debate, stage8-counterfactual, stage9-recommendation, stage10-persona, stage11-narration, cross-cutting, api, frontend, infra, docs]
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: [critical, high, medium, low]

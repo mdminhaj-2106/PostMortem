@@ -2,9 +2,10 @@
 
 **Job:** pull from heterogeneous sources at different grains/cadences and normalize into one canonical event stream. Nothing downstream can trust its inputs until this exists.
 
-**Status:** Design complete, pre-implementation.
+**Status:** Design complete, implementation plan ready. Not yet coded.
 
 **Design report:** [`docs/02-stage-design-reports/stage1-reconciliation-design.md`](../../docs/02-stage-design-reports/stage1-reconciliation-design.md)
+**Implementation plan:** [`.claude/plans/stage1-reconciliation-ingestion.md`](../../.claude/plans/stage1-reconciliation-ingestion.md) — module breakdown, build order, first-slice scope (scenarios 1/2/4-partial/5/6; scenario 3 and total-gap/drift detection are explicitly deferred, see the plan's Risks section).
 
 **Covers:** the two-layer simulator (Layer 1 ground truth / Layer 2 observed sources), the seven reconciliation scenarios (conflicting values, definitional mismatch, late-arriving history, gaps, calendar misalignment, entity/join-key mismatch, silent definitional drift), and the two new cross-cutting services it introduces (Calendar Dimension, Identity Resolution Graph).
 

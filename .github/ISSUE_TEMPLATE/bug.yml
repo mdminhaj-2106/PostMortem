@@ -1,0 +1,29 @@
+name: Bug report
+description: Something is broken or behaving incorrectly.
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include error messages, stack traces, or (for data-realism bugs) the query that shows the wrong values.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Run generate.py with...\n2. Query...\n3. See wrong value"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "e.g. macOS 14 / Python 3.14 / Neon (shared dev DB)"
