@@ -62,6 +62,8 @@ erDiagram
 
 **Deferred, not implemented:** Scenario 3 (late-arriving/mutable history) — inherently temporal, can't be honestly represented by a view over data generated once. Needs `returned_day_offset` added to `orders` in Layer 1 first.
 
+**Stage 4 sliced `billing_system` views** (added for dimensional decomposition — `.claude/plans/stage4-dimensional-decomposition.md`): `v_billing_daily_revenue_by_region`/`_segment`/`_product`, `v_billing_active_customers_by_region`/`_segment` (no `_by_product` — a customer isn't tied to one product). Each scaffolds every `(day_offset, slice_value)` pair via the real distinct dimension values (`customers.region`/`.segment`, `products.category`) and `COALESCE`s a no-orders slice-day to `0`, so a real zero-order day is never a missing row — same whole-day `source_outages` suppression as the un-sliced billing views. Verified live against episode 1 (row counts = `n_days x distinct slice values`, sliced revenue sums back to the un-sliced daily total) and episode 8's real billing outage (suppressed identically sliced and un-sliced).
+
 ## Migration/model note
 
 `customers.segment`'s CHECK constraint was migrated live once already (`SMB/Enterprise` → `New/Returning/VIP`) via `ALTER TABLE ... DROP/ADD CONSTRAINT` on the shared Neon DB, with stale test data truncated first. If a schema change is needed again on a **shared, already-populated** database: prefer `ALTER TABLE` over drop/recreate where possible, and always regenerate/re-verify against live data afterward — this project's real bugs were only ever caught that way, not by reading the code.
