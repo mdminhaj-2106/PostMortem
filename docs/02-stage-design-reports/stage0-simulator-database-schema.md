@@ -32,7 +32,7 @@ Full DDL lives in [`schema.sql`](../../pipeline/simulator/layer1_ground_truth/sc
 | Table | Grain | Holds |
 |---|---|---|
 | `episodes` | 1 row / episode | seed, day count, start date |
-| `customers` | 1 row / customer | segment (ours), region (Olist state), signup/churn day offsets |
+| `customers` | 1 row / customer | segment (RFM-style value tier: New/Returning/VIP — ours, not from Olist), region (Olist state), signup/churn day offsets |
 | `products` | 1 row / product | category, cost, price (Olist-bootstrapped) |
 | `daily_state` | 1 row / episode / day | latent driving variables + `volatility_multiplier` (§3a of design doc) |
 | `orders` | 1 row / order | atomic transaction — revenue/AOV/orders-count are derived from this, never stored |

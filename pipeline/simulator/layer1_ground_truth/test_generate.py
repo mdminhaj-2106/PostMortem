@@ -48,6 +48,7 @@ def test_generate_episode_invariants():
     for c in ep["customers"]:
         if c["churned_day_offset"] is not None:
             assert c["churned_day_offset"] >= c["signup_day_offset"]
+        assert c["segment"] in ("New", "Returning", "VIP")  # RFM tier, not SMB/Enterprise -- B2C data
 
     event_indices = set(range(len(ep["events"])))
     for i, ev in enumerate(ep["events"]):
