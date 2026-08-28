@@ -7,3 +7,4 @@ venv/
 *.sqlite
 .DS_Store
 .olist_cache/
+.claude/
