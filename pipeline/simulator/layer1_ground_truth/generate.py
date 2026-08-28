@@ -339,7 +339,7 @@ def insert_episode(conn, ep):
             cur,
             "INSERT INTO customers (episode_id, segment, region, signup_day_offset, churned_day_offset) "
             "VALUES %s RETURNING customer_id",
-            customer_rows, fetch=True,
+            customer_rows, fetch=True, page_size=5000,
         )
         customer_ids = [r[0] for r in result]
 
@@ -369,7 +369,7 @@ def insert_episode(conn, ep):
                 cur,
                 "INSERT INTO orders (episode_id, day_offset, customer_id, product_id, quantity, unit_price) "
                 "VALUES %s",
-                order_rows, page_size=1000,
+                order_rows, page_size=10000,
             )
 
         ticket_rows = [(episode_id, day, customer_ids[ci], cat) for (day, ci, cat) in ep["tickets"]]
@@ -377,7 +377,7 @@ def insert_episode(conn, ep):
             psycopg2.extras.execute_values(
                 cur,
                 "INSERT INTO support_tickets (episode_id, day_offset, customer_id, category) VALUES %s",
-                ticket_rows, page_size=1000,
+                ticket_rows, page_size=10000,
             )
 
         event_db_ids = {}
