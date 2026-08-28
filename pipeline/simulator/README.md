@@ -2,7 +2,7 @@
 
 The synthetic data foundation the whole system trains and evaluates against — there is no public dataset labeled "this revenue drop was caused by X," so this isn't a fallback, it's what makes every ML claim in the pitch checkable rather than asserted.
 
-**Status:** Layer 1 design complete — see [`docs/02-stage-design-reports/simulator-layer1-ground-truth-design.md`](../../docs/02-stage-design-reports/simulator-layer1-ground-truth-design.md). Not yet built.
+**Status:** Layer 1 design + database schema complete — see [`simulator-layer1-ground-truth-design.md`](../../docs/02-stage-design-reports/simulator-layer1-ground-truth-design.md) and [`stage0-simulator-database-schema.md`](../../docs/02-stage-design-reports/stage0-simulator-database-schema.md). Not yet built.
 
 ## Two layers
 
