@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  layer1-offline-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r pipeline/simulator/layer1_ground_truth/requirements.txt
+      - run: python pipeline/simulator/layer1_ground_truth/test_generate.py
+
+  # Layer 2's test_views.py and any future live-DB test need a DATABASE_URL secret
+  # pointed at a real (or throwaway) Postgres instance -- not configured yet.
+  # No lint/typecheck job either -- neither ruff nor mypy is adopted yet (CONSTITUTION.md).
