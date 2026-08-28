@@ -6,3 +6,4 @@ venv/
 *.db
 *.sqlite
 .DS_Store
+.olist_cache/
