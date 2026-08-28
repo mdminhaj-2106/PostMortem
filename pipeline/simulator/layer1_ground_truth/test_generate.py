@@ -37,6 +37,10 @@ def test_generate_episode_invariants():
     assert len(ep["daily_state"]) == 90
     assert [row[0] for row in ep["daily_state"]] == list(range(90))
     assert all(row[10] > 0 for row in ep["daily_state"])  # volatility_multiplier always positive
+    # reliability/satisfaction are meant to be 0-1 scores -- caught exceeding 1.0 before
+    # (symmetric noise around a 1.0 baseline with no ceiling), regression guard for that
+    assert all(0.0 <= row[6] <= 1.0 for row in ep["daily_state"])  # product_reliability
+    assert all(0.0 <= row[7] <= 1.0 for row in ep["daily_state"])  # satisfaction
 
     n_customers, n_products = len(ep["customers"]), len(ep["products"])
     for (day, cust_idx, prod_idx, qty, price) in ep["orders"]:

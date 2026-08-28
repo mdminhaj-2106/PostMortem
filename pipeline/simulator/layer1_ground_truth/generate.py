@@ -232,7 +232,10 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
         marketing_spend = max(0.0, BASE_MARKETING_SPEND * (1 - min(0.95, mc_frac)) * (1 + rng.normal(0, 0.05) * vol))
 
         po_frac = sum(e["magnitude"] * effect_fraction(day, e) for e in events if e["event_type"] == "product_outage")
-        reliability = max(0.05, 1.0 * (1 - min(0.95, po_frac)) + rng.normal(0, reliability_noise) * vol)
+        # friction only ever pulls down from the 1.0 ideal -- symmetric noise around 1.0 would
+        # spend half its mass above the ceiling of what "reliability" can even mean.
+        friction = abs(rng.normal(0, reliability_noise)) * vol
+        reliability = max(0.05, min(1.0, (1.0 - friction) * (1 - min(0.95, po_frac))))
 
         cl_frac = sum(e["magnitude"] * effect_fraction(day, e) for e in events if e["event_type"] == "competitor_launch")
         competitor_activity = max(0.0, BASE_COMPETITOR_ACTIVITY * (1 + cl_frac) + rng.normal(0, 0.02) * vol)

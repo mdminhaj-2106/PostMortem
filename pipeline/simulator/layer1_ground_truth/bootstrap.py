@@ -52,7 +52,7 @@ def reliability_baseline(stats):
     return stats["delivery_slippage"]["mean_days"], stats["delivery_slippage"]["std_days"]
 
 
-def reliability_noise_std(stats, baseline=0.015):
+def reliability_noise_std(stats, baseline=0.10):
     """Daily noise std for the abstract 0-1 product_reliability score.
 
     There's no literal unit conversion from "days of delivery slippage" to a 0-1
