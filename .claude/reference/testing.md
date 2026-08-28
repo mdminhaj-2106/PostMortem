@@ -42,4 +42,5 @@ Simple pass-through queries, one-line CLI argument wiring, anything where the SQ
 | Generate episodes → verify KPIs queryable and realistic | ✅ covered (`test_generate.py` + manual live verification) |
 | Layer 2 views reproduce all 6 implemented reconciliation scenarios | ✅ covered (`test_views.py`) |
 | Stage 1 reconciles a Layer 2 conflict into a confidence-tagged canonical value | ✅ covered (`test_reconcile.py`, offline + live-DB, Scenarios 1/2/4-partial/5/6) |
+| Stage 2 reacts to a real injected event (relevance + EMERGING/SIGNIFICANT/STRUCTURAL) within 15 days, stays quiet beforehand | ✅ covered (`test_stage2.py`, offline + live-DB scoring check against `injected_events`) |
 | End-to-end: episode → Stage 1–11 → narrated recommendation, scored against `injected_events` | Not yet — the eventual offline eval loop (architecture report §9) |
