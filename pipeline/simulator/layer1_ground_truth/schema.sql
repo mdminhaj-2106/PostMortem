@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS episodes (
     start_date  DATE NOT NULL
 );
 
--- Atomic entity. segment is our own dimension; region is an Olist-bootstrapped state code.
+-- Atomic entity. segment is our own dimension (RFM-style value tier — Olist customers are
+-- individual consumers, not companies, so a B2B SMB/Enterprise split wouldn't fit the data);
+-- region is an Olist-bootstrapped state code.
 CREATE TABLE IF NOT EXISTS customers (
     customer_id        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     episode_id          INTEGER NOT NULL REFERENCES episodes(episode_id),
-    segment              TEXT NOT NULL CHECK (segment IN ('SMB','Enterprise')),
+    segment              TEXT NOT NULL CHECK (segment IN ('New','Returning','VIP')),
     region               TEXT NOT NULL,
     signup_day_offset   INTEGER NOT NULL,
     churned_day_offset  INTEGER

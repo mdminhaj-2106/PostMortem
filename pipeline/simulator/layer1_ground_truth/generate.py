@@ -102,7 +102,7 @@ def _sample_one_event(rng, n_days, n_products):
         mitigation_completeness = float(rng.uniform(0.5, 1.0))
     affected_segment, segment_multiplier = None, 1.0
     if rng.random() < 0.4:
-        affected_segment = str(rng.choice(["SMB", "Enterprise"]))
+        affected_segment = str(rng.choice(["New", "Returning", "VIP"]))
         segment_multiplier = float(rng.uniform(1.5, 4.0))
     affected_product_idx = int(rng.integers(0, n_products)) if event_type == "inventory_shortage" else None
     return {
@@ -158,19 +158,44 @@ def gen_volatility_series(rng, n_days, block_len=21):
 
 # --- episode generation (design doc §3, §3a) ---
 
-def _new_customer(rng, stats):
+# segment is an RFM-style value tier, not company size — Olist customers are individual
+# consumers, so it's computed from actual order behavior, not assigned as a fixed label.
+SEGMENT_VIP_SPEND = 500.0
+SEGMENT_RETURNING_ORDERS = 2
+# day-0 pool represents customers with pre-episode history we can't observe directly, so
+# their starting tier is declared from a realistic prior instead of computed from nothing.
+INITIAL_SEGMENT_PRIORS = {"New": 0.40, "Returning": 0.45, "VIP": 0.15}
+INITIAL_SEED_STATS = {"New": (0, 0.0), "Returning": (2, 150.0), "VIP": (4, 650.0)}
+
+
+def _customer_segment(n_orders, total_spend):
+    if total_spend >= SEGMENT_VIP_SPEND:
+        return "VIP"
+    if n_orders >= SEGMENT_RETURNING_ORDERS:
+        return "Returning"
+    return "New"
+
+
+def _new_customer(rng, stats, initial=False):
+    if initial:
+        prior = str(rng.choice(list(INITIAL_SEGMENT_PRIORS), p=list(INITIAL_SEGMENT_PRIORS.values())))
+        n_orders, total_spend = INITIAL_SEED_STATS[prior]
+    else:
+        n_orders, total_spend = 0, 0.0
     return {
-        "segment": str(rng.choice(["SMB", "Enterprise"], p=[0.75, 0.25])),
+        "segment": _customer_segment(n_orders, total_spend),
         "region": str(sample_region(rng, stats)),
         "signup_day_offset": None,  # set by caller
         "churned_day_offset": None,
+        "n_orders": n_orders,      # generation-time scratch state, not persisted (see schema §4)
+        "total_spend": total_spend,
     }
 
 
 def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, n_products):
     customers = []
     for _ in range(n_customers_initial):
-        c = _new_customer(rng, stats)
+        c = _new_customer(rng, stats, initial=True)
         c["signup_day_offset"] = 0
         customers.append(c)
 
@@ -226,6 +251,11 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
             price = round(products[prod_idx]["base_price"] * max(0.5, 1 + rng.normal(0, 0.1)), 2)
             qty = int(rng.integers(1, 4))
             order_rows.append((day, cust_idx, prod_idx, qty, price))
+
+            c = customers[cust_idx]
+            c["n_orders"] += 1
+            c["total_spend"] += price * qty
+            c["segment"] = _customer_segment(c["n_orders"], c["total_spend"])
 
         n_new = int(rng.poisson(max(0.05, len(customers) * 0.01 * season)))
         for _ in range(n_new):
