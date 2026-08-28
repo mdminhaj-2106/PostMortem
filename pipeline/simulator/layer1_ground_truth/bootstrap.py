@@ -50,3 +50,17 @@ def reliability_baseline(stats):
     Used as the real-world noise floor for product_reliability, so an injected outage is a
     departure from genuine baseline flakiness, not from an invented perfect baseline."""
     return stats["delivery_slippage"]["mean_days"], stats["delivery_slippage"]["std_days"]
+
+
+def reliability_noise_std(stats, baseline=0.015):
+    """Daily noise std for the abstract 0-1 product_reliability score.
+
+    There's no literal unit conversion from "days of delivery slippage" to a 0-1
+    reliability score, so this doesn't try to fake one. Instead it uses the *relative*
+    volatility of real delivery timing (std/|mean| of slippage days) to scale a small
+    baseline noise level -- real data informs how noisy reliability should be relative
+    to itself, not a precise unit-for-unit conversion.
+    """
+    mean_days, std_days = reliability_baseline(stats)
+    relative_volatility = std_days / max(1.0, abs(mean_days))
+    return baseline * relative_volatility

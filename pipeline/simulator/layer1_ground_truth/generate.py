@@ -19,7 +19,7 @@ import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
 
-from bootstrap import load_olist_stats, sample_region, sample_product, seasonality_factor
+from bootstrap import load_olist_stats, sample_region, sample_product, seasonality_factor, reliability_noise_std
 
 # --- knobs (design doc §4 / §1.2-1.3 — tune once the classifiers are training against this) ---
 BASE_MARKETING_SPEND = 5000.0
@@ -27,7 +27,16 @@ BASE_TRAFFIC_PER_SPEND = 0.4
 BASE_CONVERSION_RATE = 0.03
 BASE_COMPETITOR_ACTIVITY = 0.1
 BASE_CHURN_RATE = 0.01
-RELIABILITY_NOISE_STD = 0.02
+# Real Olist customers average ~1.03 orders each -- one-time-buyer-dominated. Most orders
+# here go to a brand-new customer instead of reusing the same active pool over and over,
+# so the RFM segment split (New/Returning/VIP) reflects genuine repeat behavior instead of
+# an artifact of always sampling from a small pool. Not a literal match to Olist's lifetime
+# 1.03 (that's a multi-year marketplace average) -- a directional correction, still a knob.
+REPEAT_PURCHASE_PROB = 0.25
+# churn is scoped to customers who've already shown repeat behavior (Returning/VIP) --
+# a one-time buyer who doesn't return isn't "churn" in any meaningful sense for e-commerce,
+# it's just the base rate of e-commerce being mostly one-and-done. See design doc discussion.
+CHURN_ELIGIBLE_SEGMENTS = ("Returning", "VIP")
 
 EVENT_TYPES = ["product_outage", "marketing_cut", "competitor_launch", "inventory_shortage"]
 SEVERITY_WEIGHTS = {"minor": 0.3, "moderate": 0.5, "severe": 0.2}
@@ -169,7 +178,9 @@ INITIAL_SEED_STATS = {"New": (0, 0.0), "Returning": (2, 150.0), "VIP": (4, 650.0
 
 
 def _customer_segment(n_orders, total_spend):
-    if total_spend >= SEGMENT_VIP_SPEND:
+    # VIP requires both repeat orders and high spend -- a single big-ticket cart
+    # shouldn't count as "VIP" on its own, that's not sustained engagement.
+    if n_orders >= SEGMENT_RETURNING_ORDERS and total_spend >= SEGMENT_VIP_SPEND:
         return "VIP"
     if n_orders >= SEGMENT_RETURNING_ORDERS:
         return "Returning"
@@ -193,6 +204,8 @@ def _new_customer(rng, stats, initial=False):
 
 
 def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, n_products):
+    reliability_noise = reliability_noise_std(stats)
+
     customers = []
     for _ in range(n_customers_initial):
         c = _new_customer(rng, stats, initial=True)
@@ -219,7 +232,7 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
         marketing_spend = max(0.0, BASE_MARKETING_SPEND * (1 - min(0.95, mc_frac)) * (1 + rng.normal(0, 0.05) * vol))
 
         po_frac = sum(e["magnitude"] * effect_fraction(day, e) for e in events if e["event_type"] == "product_outage")
-        reliability = max(0.05, 1.0 * (1 - min(0.95, po_frac)) + rng.normal(0, RELIABILITY_NOISE_STD) * vol)
+        reliability = max(0.05, 1.0 * (1 - min(0.95, po_frac)) + rng.normal(0, reliability_noise) * vol)
 
         cl_frac = sum(e["magnitude"] * effect_fraction(day, e) for e in events if e["event_type"] == "competitor_launch")
         competitor_activity = max(0.0, BASE_COMPETITOR_ACTIVITY * (1 + cl_frac) + rng.normal(0, 0.02) * vol)
@@ -241,12 +254,16 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
         expected_orders = traffic * conversion_rate * vol
         n_orders = int(rng.poisson(max(0.1, expected_orders)))
         for _ in range(n_orders):
-            if not active_idxs:
+            # most orders are a first-time buyer, not a repeat draw from the active pool
+            # -- see REPEAT_PURCHASE_PROB above for why.
+            if not active_idxs or rng.random() > REPEAT_PURCHASE_PROB:
                 c = _new_customer(rng, stats)
                 c["signup_day_offset"] = day
                 customers.append(c)
-                active_idxs.append(len(customers) - 1)
-            cust_idx = int(rng.choice(active_idxs))
+                cust_idx = len(customers) - 1
+                active_idxs.append(cust_idx)
+            else:
+                cust_idx = int(rng.choice(active_idxs))
             prod_idx = int(rng.choice(len(products), p=product_weights))
             price = round(products[prod_idx]["base_price"] * max(0.5, 1 + rng.normal(0, 0.1)), 2)
             qty = int(rng.integers(1, 4))
@@ -257,7 +274,10 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
             c["total_spend"] += price * qty
             c["segment"] = _customer_segment(c["n_orders"], c["total_spend"])
 
-        n_new = int(rng.poisson(max(0.05, len(customers) * 0.01 * season)))
+        # scales off traffic (visits that don't convert same-day), not off the existing
+        # customer count -- that would compound into runaway exponential growth as the
+        # order-driven acquisition above grows the customer base.
+        n_new = int(rng.poisson(max(0.05, traffic * 0.005)))
         for _ in range(n_new):
             c = _new_customer(rng, stats)
             c["signup_day_offset"] = day
@@ -277,6 +297,8 @@ def generate_episode(rng, seed, n_days, start_date, stats, n_customers_initial, 
         churn_rate = max(0.0, min(0.3, BASE_CHURN_RATE * (1 + (1 - satisfaction)) * (1 + competitor_activity)))
         for idx in active_idxs:
             c = customers[idx]
+            if c["segment"] not in CHURN_ELIGIBLE_SEGMENTS:
+                continue  # a one-time buyer not returning isn't "churn" -- see design doc discussion
             mult = 1.0
             for e in events:
                 if e["affected_segment"] == c["segment"]:
