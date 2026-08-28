@@ -20,9 +20,9 @@ Current-state summary. For the *why* behind any decision here, the linked design
 | Layer 1 ground truth | ✅ | ✅ | 150 episodes live in Neon. Olist-bootstrapped, multi-event episodes, reactive chaining, volatility regimes. |
 | Layer 2 observed sources | ✅ | ✅ | 6 views, 6 of 7 reconciliation scenarios. Scenario 3 (mutable history) deferred — needs a Layer 1 schema extension. |
 | Stage 1 — Reconciliation & Ingestion | ✅ | ✅ (first slice) | Scenarios 1/2/4-partial/5/6 built, `test_reconcile.py` passing offline + live. Scenario 3, 4-total-gap, and Scenario 7 deferred (need Stage 2). See `.claude/plans/stage1-reconciliation-ingestion.md` |
-| Stage 2 — Significance Detection | ✅ | ❌ | Designed on a parallel/teammate track |
+| Stage 2 — Significance Detection | ✅ | ✅ (first slice) | Relevance extraction (eligibility → baseline → unusualness → candidate selection → business importance → relevance) + EMERGING/SIGNIFICANT/STRUCTURAL classification, `test_stage2.py` passing offline + live (incl. a real scoring check against `injected_events`). See `.claude/plans/stage2-relevance-extraction.md` |
 | Stage 3 — Cross-KPI Correlation | ✅ | ❌ | |
-| Stage 4 — Dimensional Decomposition | ✅ (implementation plan ready) | ❌ | Blocked on confirming Stage 2's function interface |
+| Stage 4 — Dimensional Decomposition | ✅ (implementation plan ready) | ❌ | Stage 2's *actual* function interface is now confirmed to differ from what Stage 4's design report §4 assumed (list-based, not `pandas.Series`) — Stage 4 needs to write the adapter its own design doc already anticipated, not re-derive the logic. See `stage02_significance_detection/README.md`. |
 | Stage 5a–11 | ❌ | ❌ | Not yet designed |
 | KPI Semantic Contract | Partially — specified inside Stage 1's design report §3.1 | ✅ (as `stage01_reconciliation_ingestion/semantic_contract.py`) | Not yet split into its own standalone `pipeline/cross_cutting/` module |
 | Calendar Dimension | Partially — Stage 1's design report §3.2 | ✅ (as `stage01_reconciliation_ingestion/calendar_dimension.py`) | Not yet split out standalone |
@@ -59,6 +59,7 @@ flowchart TD
 
 ## Known architectural risks
 
-- Stage 4 is blocked on Stage 2's function interface not being finalized yet (parallel-track dependency).
-- No root-level Python package/manifest yet — each pipeline module is independently venv'd. This will need consolidating once the FastAPI app needs to import across stage modules.
+- Stage 4's design assumed a `pandas.Series`-based Stage 2 interface that doesn't match what got built (list-based, see `stage02_significance_detection/README.md`) — Stage 4's own design doc already anticipated this and calls for an adapter layer, not a rewrite of Stage 2.
+- No root-level Python package/manifest yet — each pipeline module is independently venv'd. This has now actually bitten once: Stage 2 importing Stage 1's `reconcile.py` via `sys.path` caused a real module-name collision (`models.py` exists in both) that had to be worked around by evicting cache entries after the import (`stage02_significance_detection/ingest.py`). Consolidate into a real package once a third stage needs the same cross-import.
 - Scenario 3 (mutable history) in Layer 2 is a known, documented gap, not an oversight — revisit once/if the team decides it's worth the Layer 1 schema change.
+- Stage 2's `target_candidate_rate` (0.30) and temporal classification day-counts (3/10) are prototype knobs calibrated against a small number of live episodes, not a validated statistical threshold — see plan Risk #4.
