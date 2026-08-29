@@ -136,7 +136,11 @@ print(f"{'KPI':<32} {'dim':<8} {'slice':<10} {'expected':>10} {'observed':>10} {
 for s in sorted(result.slices, key=lambda s: (s.dimension, s.kpi_name, s.slice_value)):
     dev = f"{s.deviation_pct*100:.1f}" if s.deviation_pct is not None else "n/a"
     pct = f"{s.unusualness_percentile:.2f}" if s.unusualness_percentile is not None else "None"
-    print(f"{s.kpi_name:<32} {s.dimension:<8} {s.slice_value:<10} {s.expected:>10.1f} {s.observed:>10.1f} {dev:>8} {pct:>8} {s.eligibility}")
+    # expected/observed are None when the slice could not be measured at all (F10) --
+    # deliberately printed as "n/a", never as a 0.0 that would read as a real zero.
+    exp = f"{s.expected:.1f}" if s.expected is not None else "n/a"
+    obs = f"{s.observed:.1f}" if s.observed is not None else "n/a"
+    print(f"{s.kpi_name:<32} {s.dimension:<8} {s.slice_value:<10} {exp:>10} {obs:>10} {dev:>8} {pct:>8} {s.eligibility}")
 
 # ---------------------------------------------------------------------------
 hr("GROUND TRUTH CROSS-CHECK (offline scoring only -- injected_events, never fed to pipeline)")
@@ -158,7 +162,8 @@ print("so we expect the deviation to track region SIZE, not single out one regio
 region_slices = [s for s in result.slices if s.dimension == "region"]
 for s in sorted(region_slices, key=lambda s: -(s.deviation_pct or -999))[:8]:
     dev = f"{s.deviation_pct*100:+.1f}%" if s.deviation_pct is not None else "n/a"
-    print(f"  {s.kpi_name:<32} {s.slice_value:<10} observed={s.observed:>9.1f} deviation={dev:>8}  eligibility={s.eligibility}")
+    obs = f"{s.observed:.1f}" if s.observed is not None else "n/a"
+    print(f"  {s.kpi_name:<32} {s.slice_value:<10} observed={obs:>9} deviation={dev:>8}  eligibility={s.eligibility}")
 
 # ---------------------------------------------------------------------------
 hr("TELEMETRY & LLM COST LEDGER (audit finding F16)")

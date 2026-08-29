@@ -38,13 +38,28 @@ def _decompose_slice(cur, episode_id, kpi_name, dimension, slice_value, window_s
     if window_residuals:
         expected = sum(e for _, e, _ in window_residuals)
         observed = expected + sum(r for _, _, r in window_residuals)
+        observation_status = "OBSERVED"
     else:
-        expected = 0.0
-        observed = 0.0
+        # No usable residual anywhere in the window (audit finding F10). This used to
+        # report 0.0/0.0, which is indistinguishable from a slice that genuinely sold
+        # nothing -- and the sliced views COALESCE a no-orders day to a real 0, so that
+        # collision was reachable. The cause here is the opposite of "zero": either the
+        # window sits too early for the baseline to have 5 prior observations, or a
+        # source outage suppressed the rows. Say "unknown" rather than inventing a
+        # measurement Stage 5a would fingerprint as a real shape.
+        expected = None
+        observed = None
+        observation_status = "NO_DATA_IN_WINDOW"
 
-    deviation_pct = (observed - expected) / expected if expected != 0 else None
+    deviation_pct = (
+        (observed - expected) / expected
+        if expected is not None and expected != 0
+        else None
+    )
     unusualness_percentile = (
-        None if eligibility in _NO_FABRICATED_PERCENTILE else scores_by_day.get(window_end)
+        None
+        if eligibility in _NO_FABRICATED_PERCENTILE or observation_status == "NO_DATA_IN_WINDOW"
+        else scores_by_day.get(window_end)
     )
 
     return SliceResult(
@@ -52,4 +67,5 @@ def _decompose_slice(cur, episode_id, kpi_name, dimension, slice_value, window_s
         window_start_day_offset=window_start, window_end_day_offset=window_end,
         expected=expected, observed=observed, deviation_pct=deviation_pct,
         unusualness_percentile=unusualness_percentile, eligibility=eligibility,
+        observation_status=observation_status,
     )

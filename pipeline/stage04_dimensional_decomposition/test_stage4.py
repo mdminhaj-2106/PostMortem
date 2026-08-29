@@ -83,11 +83,59 @@ def test_decompose_slice_eligible_and_insufficient():
     assert eligible.eligibility == "ELIGIBLE"
     assert eligible.unusualness_percentile is not None
     assert eligible.expected > 0 and eligible.observed > 0
+    assert eligible.observation_status == "OBSERVED"
 
     assert insufficient.eligibility == "INSUFFICIENT_DATA"
     assert insufficient.unusualness_percentile is None, "never fabricate a percentile for INSUFFICIENT_DATA"
-    assert insufficient.expected == 0.0 and insufficient.observed == 0.0
     assert insufficient.deviation_pct is None
+    # Audit finding F10. This assertion used to read `expected == 0.0 and observed == 0.0`
+    # -- it encoded the bug: a slice with NO data reported the same numbers as a slice
+    # that genuinely sold nothing, and the sliced views COALESCE a real no-orders day to
+    # 0, so the collision was reachable on live data.
+    assert insufficient.observation_status == "NO_DATA_IN_WINDOW"
+    assert insufficient.expected is None and insufficient.observed is None
+
+
+def test_unmeasured_and_genuinely_zero_are_distinguishable():
+    """The F10 collision, stated directly: a slice that truly sold zero and a slice we
+    could not measure must not produce the same record."""
+    zero = [(d, Observation(value=0.0, imputation_flag="untouched")) for d in range(0, 40)]
+    missing = [(d, None) for d in range(0, 40)]
+
+    def fake_load(cur, episode_id, kpi_name, dimension, slice_value, day_range):
+        return zero if slice_value == "ZERO" else missing
+
+    original = decomposer.slice_fetcher.load_slice_timeline
+    decomposer.slice_fetcher.load_slice_timeline = fake_load
+    try:
+        genuinely_zero = decomposer._decompose_slice(None, 1, "revenue", "region", "ZERO", 30, 39)
+        unmeasured = decomposer._decompose_slice(None, 1, "revenue", "region", "GONE", 30, 39)
+    finally:
+        decomposer.slice_fetcher.load_slice_timeline = original
+
+    assert genuinely_zero.observation_status == "OBSERVED"
+    assert genuinely_zero.expected == 0.0 and genuinely_zero.observed == 0.0
+    assert unmeasured.observation_status == "NO_DATA_IN_WINDOW"
+    assert unmeasured.expected is None
+    assert (genuinely_zero.expected, genuinely_zero.observation_status) != \
+           (unmeasured.expected, unmeasured.observation_status)
+
+
+def test_output_schema_rejects_contradictory_observation_status():
+    """A null measurement claiming to be OBSERVED is exactly the ambiguity F10 removed."""
+    for bad in (
+        dict(expected=None, observed=None, deviation_pct=None, observation_status="OBSERVED"),
+        dict(expected=100.0, observed=110.0, deviation_pct=0.1, observation_status="NO_DATA_IN_WINDOW"),
+    ):
+        try:
+            SliceResult(
+                kpi_name="revenue", dimension="region", slice_value="SP",
+                window_start_day_offset=0, window_end_day_offset=5,
+                unusualness_percentile=None, eligibility="ELIGIBLE", **bad,
+            )
+            raise AssertionError(f"expected ValueError for {bad}")
+        except ValueError:
+            pass
 
 
 def test_output_schema_accepts_clean_result():
@@ -175,6 +223,8 @@ if __name__ == "__main__":
     test_decomposition_result_holds_slices()
     test_dimension_applicability_excludes_product_for_active_customers()
     test_decompose_slice_eligible_and_insufficient()
+    test_unmeasured_and_genuinely_zero_are_distinguishable()
+    test_output_schema_rejects_contradictory_observation_status()
     test_output_schema_accepts_clean_result()
     test_output_schema_rejects_injected_free_text()
 
