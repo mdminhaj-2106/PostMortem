@@ -53,7 +53,7 @@ erDiagram
 
 | View | Source | Grain | What it demonstrates |
 |---|---|---|---|
-| `v_billing_daily_revenue` | billing_system | daily/UTC | exact revenue/orders/AOV |
+| `v_billing_daily_revenue` | billing_system | daily/UTC | exact `revenue`/`orders_count`/`avg_order_value`/`units_sold` — the last appended for F14's KPI expansion (2 → 5); `CREATE OR REPLACE VIEW` can only append columns, never reorder, so re-applying is safe in place |
 | `v_billing_active_customers` | billing_system | daily | purchase-based active (trailing 30d) |
 | `v_crm_weekly_active_customers` | crm_system | ISO week (Monday-start) | broader "active" (order **or** ticket) — definitional mismatch + calendar grain |
 | `v_crm_customer_mapping` | crm_system | — | synthetic account IDs, ~3% unmerged duplicates, ~2% wrong-customer near-misses |

@@ -31,6 +31,12 @@ _VIEW_BY_KPI_DIMENSION = {
     ("active_customers_purchased_30d", "segment"): (
         "v_billing_active_customers_by_segment", "segment", "active_customers",
     ),
+    ("orders_count", "region"): ("v_billing_daily_revenue_by_region", "region", "orders_count"),
+    ("orders_count", "segment"): ("v_billing_daily_revenue_by_segment", "segment", "orders_count"),
+    ("orders_count", "product"): ("v_billing_daily_revenue_by_product", "category", "orders_count"),
+    ("units_sold", "region"): ("v_billing_daily_revenue_by_region", "region", "units_sold"),
+    ("units_sold", "segment"): ("v_billing_daily_revenue_by_segment", "segment", "units_sold"),
+    ("units_sold", "product"): ("v_billing_daily_revenue_by_product", "category", "units_sold"),
 }
 
 

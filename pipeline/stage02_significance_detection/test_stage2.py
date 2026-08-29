@@ -106,7 +106,98 @@ def test_classification_trajectory():
     assert states[12] == "NORMAL"
 
 
+def test_every_declared_kpi_is_declared_everywhere():
+    """Audit findings F9/F14. A KPI has to appear in FOUR places to work, and missing one
+    fails silently rather than loudly -- F9 was exactly this (materiality keyed on a name
+    that never existed, so every real call fell through to the wrong threshold). Offline,
+    so it costs nothing to keep."""
+    for kpi_name in ingest.KPI_NAMES:
+        assert kpi_name in business_importance.CRITICALITY, \
+            f"{kpi_name} has no declared business criticality"
+        assert (kpi_name in ingest.stage1_reconcile.SOURCES
+                or kpi_name.startswith("active_customers_")), \
+            f"{kpi_name} is in KPI_NAMES but Stage 1 has no source registry entry for it"
+        assert kpi_name in ingest.stage1_reconcile.materiality.DEFAULT_THRESHOLDS, \
+            f"{kpi_name} has no declared materiality threshold"
+
+
 # --- live DB ---
+
+def test_timeline_cache_reuses_days_without_refetching(cur):
+    """Audit finding F13. A repeat request must not re-hit the DB, and a partially
+    overlapping range must fetch only the new days -- the whole point of keying the
+    cache per day rather than per (episode, kpi, day_range)."""
+    ingest.clear_cache()
+    days = list(range(10, 25))
+
+    first = ingest.load_kpi_timeline(cur, 1, "revenue", days)
+    after_first = len(ingest._reconciled_day_cache)
+    assert after_first == len(days), "every requested day should be cached once"
+
+    second = ingest.load_kpi_timeline(cur, 1, "revenue", days)
+    assert len(ingest._reconciled_day_cache) == after_first, "repeat request refetched"
+    assert ([(d, rv.value if rv else None) for d, rv in first]
+            == [(d, rv.value if rv else None) for d, rv in second]), "cache changed the values"
+
+    ingest.load_kpi_timeline(cur, 1, "revenue", range(20, 30))  # 20-24 overlap, 25-29 new
+    assert len(ingest._reconciled_day_cache) == after_first + 5, "overlap was refetched"
+
+    # a different KPI must not collide with revenue's cached days
+    ingest.load_kpi_timeline(cur, 1, "active_customers_purchased_30d", days)
+    assert len(ingest._reconciled_day_cache) == after_first + 5 + len(days)
+    ingest.clear_cache()
+
+
+def test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur):
+    """Scenario 2's interaction-based 'active' arrives at WEEKLY grain, carried forward
+    across six of every seven days. It must not be scored as confidently as exact daily
+    billing data -- that would be the system claiming precision it does not have, the
+    opposite of the abstention behaviour the rest of Stage 2 is built around.
+
+    Both must still be ANALYZED: coarse evidence is reported, just not trusted equally."""
+    days = range(40, 72)
+    weekly = run_stage2(cur, 8, "active_customers_interacted_30d", day_range=days)
+    daily = run_stage2(cur, 8, "active_customers_purchased_30d", day_range=days)
+
+    assert {r.analysis_status for r in weekly} == {"ANALYZED"}
+    assert {r.analysis_status for r in daily} == {"ANALYZED"}
+    assert {r.confidence for r in weekly} == {"LOW"}, \
+        "weekly-grain KPI must not inherit the confidence of exact daily data"
+    assert {r.confidence for r in daily} == {"HIGH"}, \
+        "daily-grain KPI regressed -- the imputation flag change leaked past the crm rows"
+
+
+def test_calendar_misalignment_reaches_the_pipeline(cur):
+    """Audit finding F5. Scenario 5 was reachable only from its own test and the Stage 1
+    CLI, so no Stage 2+ ever saw a calendar-aligned value. Asserts an output that can
+    only exist if the wiring is real -- the same acceptance-criterion shape F3 needed.
+
+    Corroboration must appear on billing-cycle END days and nowhere else: marketing's
+    snapshot covers the same 30-day window as billing's trailing count only on that day,
+    so a cross-check on any other day would be comparing two different windows."""
+    day_range = range(20, 50)  # contains episode 8's first cycle end (day 44)
+    timeline = ingest.load_kpi_timeline(cur, 8, "active_customers_purchased_30d", day_range)
+    start_date = ingest._start_date(cur, 8)
+
+    cross_checked = [
+        d for d, rv in timeline
+        if rv is not None and "marketing_system" in rv.source_provenance
+    ]
+    assert cross_checked, "Scenario 5 never reached the pipeline timeline"
+
+    for day_offset in cross_checked:
+        assert ingest.stage1_reconcile.is_billing_cycle_end_day(cur, 8, day_offset, start_date), \
+            f"day {day_offset} was cross-checked but is not a billing-cycle end day"
+        rv = next(rv for d, rv in timeline if d == day_offset)
+        assert rv.imputation_method == "calendar_aligned_billing_cycle"
+        assert rv.uncertainty_width is not None
+
+    # every other day must be left alone, not silently cross-checked against a
+    # non-overlapping window
+    for day_offset, rv in timeline:
+        if rv is not None and day_offset not in cross_checked:
+            assert rv.imputation_method != "calendar_aligned_billing_cycle"
+
 
 def test_ingest_and_run_end_to_end(cur):
     for kpi in ingest.KPI_NAMES:
@@ -153,11 +244,15 @@ if __name__ == "__main__":
     test_business_importance_declared_evidence()
     test_relevance_matrix_rows()
     test_classification_trajectory()
+    test_every_declared_kpi_is_declared_everywhere()
 
     load_dotenv()
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
         with conn.cursor() as cur:
+            test_timeline_cache_reuses_days_without_refetching(cur)
+            test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur)
+            test_calendar_misalignment_reaches_the_pipeline(cur)
             test_ingest_and_run_end_to_end(cur)
             test_scoring_reacts_to_a_real_injected_event(cur)
     finally:

@@ -8,11 +8,13 @@ Usage:
 
 import argparse
 import os
+from dataclasses import replace
 
 import psycopg2
 from dotenv import load_dotenv
 
 import calendar_dimension
+import identity_resolution
 import materiality
 import semantic_contract
 from models import ReconciledValue
@@ -97,49 +99,133 @@ def reconcile_partial_gap_revenue(cur, episode_id, day_offset, billing_revenue=N
     )
 
 
-# --- Scenario 1 (conflicting values) ---
+# --- Scenario 1 (conflicting values), parameterized ---
 
-def reconcile_conflicting_values(cur, episode_id, day_offset):
-    billing = _fetch_billing_revenue(cur, episode_id, day_offset)
-    marketing = _fetch_marketing_attributed_revenue(cur, episode_id, day_offset)
+# kpi_name -> source entries, AUTHORITATIVE FIRST. Each entry is
+# (source_name, view, column); the column name doubles as the metric's key in the
+# Semantic Contract, so bias metadata is looked up rather than branched on.
+#
+# Audit finding F7: this was three bespoke functions with view and column names baked
+# into private per-source fetch helpers, so adding a KPI or a source meant copy-pasting
+# another one. There is still exactly ONE real conflict pair in this dataset (revenue:
+# billing vs marketing) -- verified, it is the only construct two sources both report --
+# which is why the hardcoded version survived; a registry is what let KPIs 3-5 land as
+# data instead of code (F14).
+SOURCES = {
+    "revenue": (
+        ("billing_system", "v_billing_daily_revenue", "revenue"),
+        ("marketing_system", "v_marketing_daily_attributed_revenue", "attributed_revenue"),
+    ),
+    "orders_count": (
+        ("billing_system", "v_billing_daily_revenue", "orders_count"),
+    ),
+    "avg_order_value": (
+        ("billing_system", "v_billing_daily_revenue", "avg_order_value"),
+    ),
+    "units_sold": (
+        ("billing_system", "v_billing_daily_revenue", "units_sold"),
+    ),
+}
 
-    if billing is not None and marketing is None:
-        return reconcile_partial_gap_revenue(cur, episode_id, day_offset, billing_revenue=billing)
 
-    if billing is None:
+def _fetch_metric(cur, view, column, episode_id, day_offset):
+    """view/column come only from SOURCES above -- declared constants, never user input,
+    so the f-string is not an injection surface. episode_id/day_offset stay parameters."""
+    cur.execute(
+        f"SELECT {column} FROM {view} WHERE episode_id=%s AND day_offset=%s",
+        (episode_id, day_offset),
+    )
+    row = cur.fetchone()
+    return float(row[0]) if row and row[0] is not None else None
+
+
+def reconcile(cur, episode_id, day_offset, kpi_name):
+    """One reconciler for every registry-declared KPI (F7). Same escalation ladder the
+    hardcoded revenue path used: authoritative source anchors, declared bias is corrected
+    off the others, the materiality gate decides average-vs-anchor, and an unresolvable
+    conflict declines rather than propagating a made-up number."""
+    if kpi_name not in SOURCES:
+        raise ValueError(
+            f"unknown kpi_name: {kpi_name!r} -- declare its sources in SOURCES rather "
+            f"than adding another bespoke reconcile_* function (F7). "
+            f"Known: {tuple(SOURCES)}"
+        )
+    entries = SOURCES[kpi_name]
+    authoritative_source, auth_view, auth_column = entries[0]
+
+    authoritative = _fetch_metric(cur, auth_view, auth_column, episode_id, day_offset)
+    if authoritative is None:
         # Authoritative source dark. Total-gap forecast reconciliation is out of scope
         # for this slice (needs Stage 2's changepoint engine -- plan Risk #1); decline
         # rather than propagate a shakier bias-corrected-only estimate.
         return ReconciledValue(
-            episode_id=episode_id, day_offset=day_offset, kpi_name="revenue", value=None,
+            episode_id=episode_id, day_offset=day_offset, kpi_name=kpi_name, value=None,
             confidence_tier="declared_unresolved", source_provenance=[], imputation_flag="fully_imputed",
         )
 
-    n_days = _fetch_n_days(cur, episode_id)
-    corrected_marketing = semantic_contract.apply_bias_correction(
-        "marketing_system", "attributed_revenue", marketing, day_offset, n_days
-    )
-    spread = abs(billing - corrected_marketing)
+    corroborators = []
+    for source_name, view, column in entries[1:]:
+        raw = _fetch_metric(cur, view, column, episode_id, day_offset)
+        if raw is None:
+            continue
+        n_days = _fetch_n_days(cur, episode_id)
+        corroborators.append((
+            source_name,
+            semantic_contract.apply_bias_correction(source_name, column, raw, day_offset, n_days),
+        ))
 
-    if not materiality.is_material(billing, corrected_marketing, "revenue"):
-        value = (billing + corrected_marketing) / 2
-        tier = "exact" if spread < 1e-6 else "aggregated"
+    if len(entries) == 1:
+        # Only one source declared for this KPI -- nothing to disagree with. Not an
+        # imputation and not a gap: billing is contract-declared ground-truth-equivalent.
         return ReconciledValue(
-            episode_id=episode_id, day_offset=day_offset, kpi_name="revenue", value=value,
-            confidence_tier=tier, source_provenance=["billing_system", "marketing_system"],
-            imputation_flag="untouched", uncertainty_width=spread,
+            episode_id=episode_id, day_offset=day_offset, kpi_name=kpi_name, value=authoritative,
+            confidence_tier="exact", source_provenance=[authoritative_source],
+            imputation_flag="untouched",
         )
 
-    # Bias correction alone doesn't explain the remaining gap. billing is the declared
-    # ground-truth-equivalent source (Semantic Contract) -- anchor on it and widen
+    if not corroborators:
+        # A corroborating source IS declared but is dark today (partial gap, Scenario 4).
+        # Same fact, just unconfirmed -- triangulate straight from the authoritative
+        # source rather than leaving a null.
+        return ReconciledValue(
+            episode_id=episode_id, day_offset=day_offset, kpi_name=kpi_name, value=authoritative,
+            confidence_tier="estimated", source_provenance=[authoritative_source],
+            imputation_flag="partially_imputed", imputation_method="triangulated_from_billing_direct",
+            uncertainty_width=0.0,
+        )
+
+    provenance = [authoritative_source] + [s for s, _ in corroborators]
+    spread = max(abs(authoritative - corrected) for _, corrected in corroborators)
+    disagrees = any(
+        materiality.is_material(authoritative, corrected, kpi_name)
+        for _, corrected in corroborators
+    )
+
+    if not disagrees:
+        values = [authoritative] + [corrected for _, corrected in corroborators]
+        return ReconciledValue(
+            episode_id=episode_id, day_offset=day_offset, kpi_name=kpi_name,
+            value=sum(values) / len(values),
+            confidence_tier="exact" if spread < 1e-6 else "aggregated",
+            source_provenance=provenance, imputation_flag="untouched", uncertainty_width=spread,
+        )
+
+    # Bias correction alone doesn't explain the remaining gap. The authoritative source is
+    # declared ground-truth-equivalent (Semantic Contract) -- anchor on it and widen
     # uncertainty rather than average through a real disagreement. Full cross-signal
-    # triangulation across a DAG of 30-50 KPIs is out of scope for this two-source slice.
+    # triangulation across a DAG of 30-50 KPIs is out of scope for this slice.
     return ReconciledValue(
-        episode_id=episode_id, day_offset=day_offset, kpi_name="revenue", value=billing,
-        confidence_tier="triangulated", source_provenance=["billing_system", "marketing_system"],
+        episode_id=episode_id, day_offset=day_offset, kpi_name=kpi_name, value=authoritative,
+        confidence_tier="triangulated", source_provenance=provenance,
         imputation_flag="untouched", imputation_method="bias_corrected_cross_check",
         uncertainty_width=spread,
     )
+
+
+def reconcile_conflicting_values(cur, episode_id, day_offset):
+    """Kept as the name Stage 2's ingest and the demo already call. Thin alias, not a
+    second code path."""
+    return reconcile(cur, episode_id, day_offset, "revenue")
 
 
 # --- Scenario 2 (definitional mismatch) ---
@@ -158,15 +244,82 @@ def reconcile_definitional_active_customers(cur, episode_id, day_offset, start_d
     week_bucket = calendar_dimension.bucket_day(day_offset, "iso_week", start_date)
     crm_val = _fetch_crm_weekly_active_customers(cur, episode_id, week_bucket)
     if crm_val is not None:
+        # crm snapshots ONCE per week, at week_start_day_offset. That day is a real
+        # observation; the other six carry it forward. Declaring all seven "untouched"
+        # made a weekly metric score HIGH history_confidence in Stage 2 -- identical to
+        # exact daily billing data -- because eligibility only inspects imputation_flag.
+        # Flagging the carried-forward days is what makes Stage 2 correctly treat this
+        # KPI as coarser evidence (it lands LOW_CONFIDENCE, so Stage 3 reports it but
+        # declines to RANK it against daily-grain KPIs).
+        is_snapshot_day = day_offset == week_bucket
         rows.append(ReconciledValue(
             episode_id=episode_id, day_offset=day_offset, kpi_name="active_customers_interacted_30d",
             value=crm_val, confidence_tier="aggregated", source_provenance=["crm_system"],
+            imputation_flag="untouched" if is_snapshot_day else "partially_imputed",
             imputation_method="calendar_bucketed_weekly_snapshot",
         ))
     return rows
 
 
-# --- Scenario 5 (calendar misalignment) ---
+# --- Scenario 5 (calendar misalignment), wired into the daily pipeline path ---
+
+def is_billing_cycle_end_day(cur, episode_id, day_offset, start_date):
+    """True on the one day per billing cycle where marketing's cycle snapshot and
+    billing's trailing-30-day count cover the SAME 30-day window."""
+    cycle_index = calendar_dimension.bucket_day(day_offset, "billing_cycle_month", start_date)
+    if cycle_index is None:
+        return False
+    return calendar_dimension.billing_cycle_end_day(cycle_index, _fetch_n_days(cur, episode_id)) == day_offset
+
+
+def apply_calendar_cycle_cross_check(cur, episode_id, day_offset, start_date, rv):
+    """Scenario 5 as it actually reaches Stages 2-4 (audit finding F5).
+
+    marketing reports active_customers on a 30-day billing cycle; billing reports it
+    daily. The Semantic Contract declares these the same construct differing only in
+    calendar grain, so they are directly comparable on exactly ONE day per cycle -- the
+    cycle's snapshot day. Comparing on any other day compares two different 30-day
+    windows and would manufacture a conflict that isn't there.
+
+    On that day the daily value gains genuine cross-source, cross-calendar corroboration.
+    Every other day passes through untouched -- there is nothing to compare against, and
+    inventing a comparison is exactly what this scenario exists to avoid.
+
+    Previously this whole scenario lived only in reconcile_calendar_misaligned_active_
+    customers, which nothing but its own test and the CLI ever called, so the pipeline
+    never saw it.
+    """
+    if rv is None or rv.value is None:
+        return rv
+    if not is_billing_cycle_end_day(cur, episode_id, day_offset, start_date):
+        return rv
+
+    cycle_index = calendar_dimension.bucket_day(day_offset, "billing_cycle_month", start_date)
+    marketing_value = _fetch_marketing_cycle_active_customers(cur, episode_id, cycle_index)
+    if marketing_value is None:
+        return rv  # marketing dark this cycle -- billing alone, unchanged
+
+    spread = abs(rv.value - marketing_value)
+    provenance = list(rv.source_provenance) + ["marketing_system"]
+
+    if materiality.is_material(rv.value, marketing_value, rv.kpi_name):
+        # A real cross-calendar disagreement. billing is the declared ground-truth-
+        # equivalent source, so anchor on it and widen uncertainty rather than average
+        # through it -- same ruling as Scenario 1's large-spread fork.
+        return replace(
+            rv, confidence_tier="triangulated", source_provenance=provenance,
+            imputation_method="calendar_aligned_billing_cycle", uncertainty_width=spread,
+        )
+
+    # Two independently-calendared sources agree -- that is real corroboration, so keep
+    # billing's exact value and record who confirmed it.
+    return replace(
+        rv, source_provenance=provenance,
+        imputation_method="calendar_aligned_billing_cycle", uncertainty_width=spread,
+    )
+
+
+# --- Scenario 5 (calendar misalignment), standalone cycle-grain form ---
 
 def reconcile_calendar_misaligned_active_customers(cur, episode_id, day_offset, start_date):
     """billing's daily and marketing's billing-cycle active_customers share the same
@@ -238,7 +391,8 @@ def main():
     parser.add_argument("--episode-id", type=int, required=True)
     parser.add_argument("--day-offset", type=int, required=True)
     parser.add_argument(
-        "--kpi", choices=["revenue", "active_customers_definitional", "active_customers_calendar"],
+        "--kpi",
+        choices=sorted(SOURCES) + ["active_customers_definitional", "active_customers_calendar"],
         default="revenue",
     )
     args = parser.parse_args()
@@ -246,8 +400,17 @@ def main():
     conn = _connect()
     try:
         with conn.cursor() as cur:
-            if args.kpi == "revenue":
-                print(reconcile_conflicting_values(cur, args.episode_id, args.day_offset))
+            # Scenario 6's identity-quality report, printed on every run so it is
+            # actually exercised rather than living only in its own test (F4).
+            summary = identity_resolution.summarize(cur, args.episode_id)
+            print(
+                f"identity resolution (Scenario 6): {summary['total_mappings']} crm mappings, "
+                f"{summary['counts']['ambiguous']} ambiguous "
+                f"({summary['ambiguous_rate']:.1%}) -- reported, not applied: no KPI joins "
+                f"through crm_account_id"
+            )
+            if args.kpi in SOURCES:
+                print(reconcile(cur, args.episode_id, args.day_offset, args.kpi))
             elif args.kpi == "active_customers_definitional":
                 start_date = _fetch_episode_start_date(cur, args.episode_id)
                 for row in reconcile_definitional_active_customers(cur, args.episode_id, args.day_offset, start_date):

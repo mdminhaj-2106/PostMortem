@@ -36,7 +36,64 @@ def _import_stage1_reconcile():
 
 stage1_reconcile = _import_stage1_reconcile()
 
-KPI_NAMES = ("revenue", "active_customers_purchased_30d")
+# Audit finding F14: the brief's minimum is 3-5 KPIs and this was 2. KPIs 3-5 come from
+# columns that already existed in v_billing_daily_revenue (orders_count, avg_order_value)
+# plus one appended column (units_sold) -- no new reconciliation logic, they are just
+# declared in Stage 1's SOURCES registry (F7). Every declaration site must agree or you
+# get an F9-class silent bug: this tuple, Stage 1's SOURCES and DEFAULT_THRESHOLDS,
+# business_importance.CRITICALITY, and stage04's DIMENSION_APPLICABILITY.
+KPI_NAMES = (
+    "revenue",
+    "active_customers_purchased_30d",
+    # Scenario 2's OTHER half. reconcile_definitional_active_customers has always
+    # computed this alongside the purchased-based one and ingest threw it away, so the
+    # definitional mismatch -- the entire point of Scenario 2, "keep both as separate
+    # features, never collapse them" -- never reached Stage 2. The divergence between
+    # interacted-but-not-purchasing and purchasing IS the signal, not noise to discard.
+    "active_customers_interacted_30d",
+    "orders_count",
+    "avg_order_value",
+    "units_sold",
+)
+
+
+_reconciled_day_cache = {}  # (episode_id, kpi_name, day_offset) -> ReconciledValue_or_None
+
+
+def clear_cache():
+    """Drop the memoized days. Only needed if Layer 1/2 data changes inside a live
+    process (re-applying views.sql, regenerating an episode) -- normal runs never
+    need it, and the demo/tests do not call it."""
+    _reconciled_day_cache.clear()
+
+
+def _reconcile_day(cur, episode_id, kpi_name, day_offset):
+    """Registry-declared KPIs go through Stage 1's one parameterized reconciler (F7).
+    active_customers_* is not in that registry on purpose: Scenario 2 emits two
+    genuinely different constructs from one call (purchased-based vs interaction-based
+    'active'), which is a different shape from "one KPI, N sources disagreeing" and must
+    not be collapsed into it."""
+    if kpi_name in stage1_reconcile.SOURCES:
+        return stage1_reconcile.reconcile(cur, episode_id, day_offset, kpi_name)
+
+    start_date = _start_date(cur, episode_id)
+    rows = stage1_reconcile.reconcile_definitional_active_customers(
+        cur, episode_id, day_offset, start_date
+    )
+    rv = next((r for r in rows if r.kpi_name == kpi_name), None)
+
+    # Scenario 5 (F5). marketing reports the SAME construct as billing's purchase-based
+    # active_customers, on a 30-day billing cycle instead of daily -- so on the one day
+    # per cycle where the two windows line up, the daily value gets real cross-calendar
+    # corroboration. This scenario used to be reachable only from its own test and the
+    # Stage 1 CLI, so nothing downstream ever saw it. Only the purchase-based KPI is
+    # eligible: crm's interaction-based count is a different construct (Scenario 2) and
+    # must not be cross-checked against marketing's purchase-based snapshot.
+    if kpi_name == "active_customers_purchased_30d":
+        rv = stage1_reconcile.apply_calendar_cycle_cross_check(
+            cur, episode_id, day_offset, start_date, rv
+        )
+    return rv
 
 
 def load_kpi_timeline(cur, episode_id, kpi_name, day_range):
@@ -44,20 +101,35 @@ def load_kpi_timeline(cur, episode_id, kpi_name, day_range):
     iterable of day_offsets). A ReconciledValue with value=None (declared_unresolved)
     is kept, not dropped -- the eligibility gate needs to see the gap. Only truly
     absent rows (active_customers_purchased_30d has no billing row that day) become
-    a bare None."""
+    a bare None.
+
+    Memoized per DAY, not per timeline (audit finding F13). Each day costs real Neon
+    round trips through Stage 1's reconciliation, and one Stage 3 run re-requests the
+    same days five times over: run_stage2 three times (F3's two-pass relationship
+    wiring) plus load_dollar_residuals twice. Measured before this cache, Stage 3
+    alone was 111s of a 175s demo.
+
+    Keyed per day rather than per (episode, kpi, day_range) so partially-overlapping
+    ranges still hit -- test_stage3 asks for a different window per episode, and a
+    whole-range key would miss every time.
+
+    `cur` is deliberately not part of the key: this project runs one connection per
+    process against one database, and Layer 1 is generated once and frozen while
+    Layer 2 is a set of deterministic views over it, so the same (episode, kpi, day)
+    is the same value for the life of the process. clear_cache() exists for the one
+    case that isn't true. Unbounded by design -- a full 150-episode x 2-KPI x 120-day
+    sweep is ~36k small dataclasses, and no run in this repo is long-lived enough for
+    eviction to be worth the code.
+    """
     if kpi_name not in KPI_NAMES:
         raise ValueError(f"unknown kpi_name: {kpi_name!r}, expected one of {KPI_NAMES}")
 
     timeline = []
     for day_offset in day_range:
-        if kpi_name == "revenue":
-            rv = stage1_reconcile.reconcile_conflicting_values(cur, episode_id, day_offset)
-        else:
-            rows = stage1_reconcile.reconcile_definitional_active_customers(
-                cur, episode_id, day_offset, _start_date(cur, episode_id)
-            )
-            rv = next((r for r in rows if r.kpi_name == "active_customers_purchased_30d"), None)
-        timeline.append((day_offset, rv))
+        key = (episode_id, kpi_name, day_offset)
+        if key not in _reconciled_day_cache:
+            _reconciled_day_cache[key] = _reconcile_day(cur, episode_id, kpi_name, day_offset)
+        timeline.append((day_offset, _reconciled_day_cache[key]))
     return timeline
 
 

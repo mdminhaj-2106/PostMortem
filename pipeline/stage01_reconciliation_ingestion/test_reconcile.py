@@ -15,6 +15,7 @@ import identity_resolution
 import materiality
 import semantic_contract
 from models import ReconciledValue
+import reconcile as reconcile_module
 from reconcile import (
     _fetch_billing_revenue,
     _fetch_episode_start_date,
@@ -61,6 +62,42 @@ def test_bias_correction_matches_views_sql():
     assert semantic_contract.apply_bias_correction("billing_system", "revenue", 50.0) == 50.0
 
 
+def test_bias_correction_is_read_from_the_contract_not_hardcoded():
+    """Audit finding F8. The factor used to live in module constants beside a prose
+    description in SEMANTIC_CONTRACT -- two sources of truth hand-synced. Editing the
+    contract must now change the arithmetic; if it doesn't, the hardcoded branch is back."""
+    entry = semantic_contract.SEMANTIC_CONTRACT["marketing_system"]["metrics"]["attributed_revenue"]
+    original = entry["bias_factor"]
+    try:
+        entry["bias_factor"] = {"before_midpoint": 0.5, "from_midpoint": 0.5}
+        assert semantic_contract.apply_bias_correction(
+            "marketing_system", "attributed_revenue", 100.0, day_offset=0, n_days=100
+        ) == 200.0, "apply_bias_correction ignored the contract"
+    finally:
+        entry["bias_factor"] = original
+
+    # A metric with no declared bias passes through untouched...
+    assert semantic_contract.apply_bias_correction("billing_system", "revenue", 42.0) == 42.0
+    # ...and an undeclared pair raises instead of silently assuming "no bias" (F9 class).
+    try:
+        semantic_contract.apply_bias_correction("billing_system", "not_a_metric", 1.0)
+        raise AssertionError("expected KeyError for an undeclared source/metric")
+    except KeyError:
+        pass
+
+
+def test_source_registry_covers_every_declared_kpi():
+    """Audit finding F7/F14. Every KPI in the registry needs a materiality threshold and
+    a contract entry for each of its sources, or it silently misbehaves at runtime."""
+    for kpi_name, entries in reconcile_module.SOURCES.items():
+        assert kpi_name in materiality.DEFAULT_THRESHOLDS, f"no materiality threshold for {kpi_name}"
+        assert entries, f"{kpi_name} declares no sources"
+        for source_name, view, column in entries:
+            contract = semantic_contract.metric_contract(source_name, column)
+            assert "bias_factor" in contract, f"{source_name}.{column} has no bias_factor declared"
+            assert view.startswith("v_"), f"{view} does not look like a Layer 2 view"
+
+
 def test_reconciled_value_validates_tier():
     ReconciledValue(1, 0, "revenue", 100.0, "exact", ["billing_system"])  # must not raise
     try:
@@ -74,6 +111,14 @@ def test_identity_resolution_zones():
     assert identity_resolution.score_match(5, 5) == "auto_merge"
     assert identity_resolution.score_match(5, 6) == "ambiguous"  # near-miss
     assert identity_resolution.score_match(5, 900005) == "ambiguous"  # duplicate
+
+    # Audit finding F4: ZONES declared an "auto_reject" that score_match could never
+    # return. Every declared zone must be reachable -- declaring one the code cannot
+    # produce overstates the machinery.
+    assert "auto_reject" not in identity_resolution.ZONES
+    produced = {identity_resolution.score_match(a, b) for a, b in [(5, 5), (5, 6), (5, 900005)]}
+    assert produced == set(identity_resolution.ZONES), \
+        f"ZONES {identity_resolution.ZONES} does not match what score_match can produce: {produced}"
 
 
 # --- live DB ---
@@ -150,6 +195,31 @@ def test_scenario2_definitional_two_rows(cur):
             assert r.source_provenance == ["crm_system"]
 
 
+def test_weekly_snapshot_marks_carried_forward_days(cur):
+    """crm snapshots active_customers ONCE per ISO week; the other six days carry that
+    value forward. Declaring all seven 'untouched' made Stage 2 score a weekly metric at
+    HIGH history_confidence, identical to exact daily billing data, because eligibility
+    only inspects imputation_flag. Exactly one observed day per week, the rest flagged."""
+    cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
+    episode_id = cur.fetchone()[0]
+    start_date = _fetch_episode_start_date(cur, episode_id)
+
+    flags_by_day = {}
+    for day_offset in range(35, 56):  # three full ISO weeks
+        for r in reconcile_definitional_active_customers(cur, episode_id, day_offset, start_date):
+            if r.kpi_name == "active_customers_interacted_30d":
+                flags_by_day[day_offset] = r.imputation_flag
+
+    assert flags_by_day, "expected crm rows in this window"
+    observed = sorted(d for d, f in flags_by_day.items() if f == "untouched")
+    assert observed, "no day was marked as an actual observation"
+    assert all(f in ("untouched", "partially_imputed") for f in flags_by_day.values())
+    # snapshot days are exactly one ISO week apart
+    assert all(b - a == 7 for a, b in zip(observed, observed[1:])), observed
+    # and the carried-forward days dominate, which is what should cost it confidence
+    assert len(observed) < len(flags_by_day) / 2
+
+
 def test_scenario5_calendar_alignment(cur):
     cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
     episode_id = cur.fetchone()[0]
@@ -180,8 +250,19 @@ def test_scenario6_identity_flags(cur):
     episode_id = cur.fetchone()[0]
     results = identity_resolution.resolve_customer_identities(cur, episode_id)
 
-    duplicates = [r for r in results if r["crm_account_id"] >= 900000]
-    near_misses = [r for r in results if r["crm_account_id"] != r["customer_id"] and r["crm_account_id"] < 900000]
+    # Derive the synthetic-duplicate boundary the same way v_crm_customer_mapping does.
+    # This used to hardcode 900000, which stopped being the offset when F2 replaced it
+    # with MAX(customer_id) -- real ids run past 900000, so a real high-id customer would
+    # be counted as a synthetic duplicate. It only kept passing because episode 1's ids
+    # happen to sit below the old constant.
+    cur.execute("SELECT COALESCE(MAX(customer_id), 0) FROM customers")
+    duplicate_threshold = cur.fetchone()[0]
+
+    duplicates = [r for r in results if r["crm_account_id"] > duplicate_threshold]
+    near_misses = [
+        r for r in results
+        if r["crm_account_id"] != r["customer_id"] and r["crm_account_id"] <= duplicate_threshold
+    ]
     exact = [r for r in results if r["crm_account_id"] == r["customer_id"]]
 
     assert duplicates, "expected some synthetic duplicate crm_account_ids"
@@ -191,12 +272,34 @@ def test_scenario6_identity_flags(cur):
     assert all(r["zone"] == "auto_merge" for r in exact)
 
 
+def test_identity_summary_runs_and_matches_injected_rate(cur):
+    """Audit finding F4: identity resolution had no caller but its own test, so Scenario
+    6 never actually ran. summarize() is now invoked on every Stage 1 CLI run.
+
+    views.sql injects ~2% near-misses and ~3% unmerged duplicates, so the ambiguous rate
+    should land near 5% -- a real cross-check against the generator's declared rates, not
+    just "the function returned something"."""
+    cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
+    episode_id = cur.fetchone()[0]
+
+    summary = identity_resolution.summarize(cur, episode_id)
+    assert summary["total_mappings"] > 0
+    assert sum(summary["counts"].values()) == summary["total_mappings"], "zone counts must partition"
+    assert set(summary["counts"]) == set(identity_resolution.ZONES)
+    assert 0.02 < summary["ambiguous_rate"] < 0.10, (
+        f"ambiguous rate {summary['ambiguous_rate']:.3f} is far from the ~5% views.sql "
+        f"injects (2% near-miss + 3% duplicate) -- the mapping view or the scorer changed"
+    )
+
+
 if __name__ == "__main__":
     test_materiality_gate()
     test_calendar_bucket_daily()
     test_calendar_bucket_iso_week()
     test_calendar_bucket_billing_cycle_month()
     test_bias_correction_matches_views_sql()
+    test_bias_correction_is_read_from_the_contract_not_hardcoded()
+    test_source_registry_covers_every_declared_kpi()
     test_reconciled_value_validates_tier()
     test_identity_resolution_zones()
 
@@ -208,8 +311,10 @@ if __name__ == "__main__":
             test_scenario1_partial_gap_graceful(cur)
             test_scenario4_partial_gap_direct(cur)
             test_scenario2_definitional_two_rows(cur)
+            test_weekly_snapshot_marks_carried_forward_days(cur)
             test_scenario5_calendar_alignment(cur)
             test_scenario6_identity_flags(cur)
+            test_identity_summary_runs_and_matches_injected_rate(cur)
     finally:
         conn.close()
     print("OK")

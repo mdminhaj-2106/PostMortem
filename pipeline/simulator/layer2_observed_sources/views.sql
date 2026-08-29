@@ -12,11 +12,15 @@
 -- billing_system: daily, UTC day, exact revenue/orders/AOV. Purchase-based "active".
 -- Total-gap-capable (a suppressed day has no row at all, not a zero).
 
+-- units_sold appended last on purpose: CREATE OR REPLACE VIEW can only add columns at
+-- the end, never reorder or retype existing ones, so this stays a safe in-place replace
+-- against the shared DB (audit finding F14 -- KPI expansion 2 -> 5).
 CREATE OR REPLACE VIEW v_billing_daily_revenue AS
 SELECT o.episode_id, o.day_offset,
        SUM(o.quantity * o.unit_price) AS revenue,
        COUNT(*) AS orders_count,
-       ROUND(AVG(o.unit_price * o.quantity)::numeric, 2) AS avg_order_value
+       ROUND(AVG(o.unit_price * o.quantity)::numeric, 2) AS avg_order_value,
+       SUM(o.quantity) AS units_sold
 FROM orders o
 WHERE NOT EXISTS (
     SELECT 1 FROM source_outages so
@@ -73,7 +77,17 @@ WHERE NOT EXISTS (
 )
 GROUP BY w.episode_id, w.week_start_day_offset;
 
+-- The synthetic duplicate-account offset MUST stay clear of the real customer_id range,
+-- or a fake "second account" id silently equals some other real customer's id and the
+-- scenario's own answer key is corrupt. A hardcoded 900000 did exactly that: real ids
+-- run 1..1,237,910, so 348,123 synthetic duplicates collided with real customers
+-- (audit finding F2, .claude/plans/remediation-audit-and-fix-plan.md). Derive the
+-- offset from the actual max instead of hardcoding it, so it stays correct as the
+-- dataset grows.
 CREATE OR REPLACE VIEW v_crm_customer_mapping AS
+WITH id_space AS (
+    SELECT COALESCE(MAX(customer_id), 0) AS max_customer_id FROM customers
+)
 SELECT c.episode_id, c.customer_id,
     CASE WHEN mod(abs(hashtext(c.customer_id::text || ':mismatch')), 100) < 2
          THEN c.customer_id + 1  -- near-miss: silently mapped to the wrong customer
@@ -82,8 +96,8 @@ SELECT c.episode_id, c.customer_id,
 FROM customers c
 UNION ALL
 -- unmerged duplicates: ~3% of customers also show up under a second synthetic account id
-SELECT c.episode_id, c.customer_id, 900000 + c.customer_id AS crm_account_id
-FROM customers c
+SELECT c.episode_id, c.customer_id, s.max_customer_id + c.customer_id AS crm_account_id
+FROM customers c CROSS JOIN id_space s
 WHERE mod(abs(hashtext(c.customer_id::text || ':dup')), 100) < 3;
 
 -- marketing_system: billing-cycle month (30-day blocks starting day 15, not calendar
@@ -155,7 +169,8 @@ order_region AS (
 )
 SELECT d.episode_id, d.day_offset, r.region,
        COALESCE(SUM(orr.quantity * orr.unit_price), 0) AS revenue,
-       COUNT(orr.region) AS orders_count
+       COUNT(orr.region) AS orders_count,
+       COALESCE(SUM(orr.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN regions r ON r.episode_id = d.episode_id
 LEFT JOIN order_region orr
@@ -179,7 +194,8 @@ order_segment AS (
 )
 SELECT d.episode_id, d.day_offset, s.segment,
        COALESCE(SUM(os.quantity * os.unit_price), 0) AS revenue,
-       COUNT(os.segment) AS orders_count
+       COUNT(os.segment) AS orders_count,
+       COALESCE(SUM(os.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN segments s ON s.episode_id = d.episode_id
 LEFT JOIN order_segment os
@@ -207,7 +223,8 @@ order_category AS (
 )
 SELECT d.episode_id, d.day_offset, c.category,
        COALESCE(SUM(oc.quantity * oc.unit_price), 0) AS revenue,
-       COUNT(oc.category) AS orders_count
+       COUNT(oc.category) AS orders_count,
+       COALESCE(SUM(oc.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN categories c ON c.episode_id = d.episode_id
 LEFT JOIN order_category oc

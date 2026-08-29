@@ -37,6 +37,30 @@ def _mean_residual(residuals_by_day, start, end):
     return sum(values) / len(values) if values else None
 
 
+def windows_link(a_window, a_residuals, b_window, b_residuals, dag_entry):
+    """Does this ONE pair of windows satisfy the edge -- adjacent in the expected lag AND
+    co-moving in the expected direction? Returns (linked, adjacent) so a caller can tell
+    "never adjacent" from "adjacent but the direction refuted it", which are different
+    findings: the first means nothing was near it, the second means something was near it
+    and the evidence said no.
+
+    The core predicate for walking a whole DAG; attempt_cluster is the single-edge
+    convenience wrapper over it.
+    """
+    lag_min, lag_max = dag_entry["expected_lag_days"]
+    if not (lag_min <= b_window[0] - a_window[0] <= lag_max):
+        return False, False
+
+    sign_a = _sign(_mean_residual(dict(a_residuals), a_window[0], a_window[1]))
+    sign_b = _sign(_mean_residual(dict(b_residuals), b_window[0], b_window[1]))
+    if sign_a is None or sign_b is None:
+        return False, True  # adjacent, but one side has no usable movement to compare
+
+    if dag_entry["expected_direction"] == "SAME_SIGN":
+        return sign_a == sign_b, True
+    return sign_a != sign_b, True
+
+
 def attempt_cluster(kpi_a_windows, kpi_a_residuals, kpi_b_windows, kpi_b_residuals, dag_entry):
     """kpi_a is the DAG-key KPI, kpi_b is dag_entry['target']. Returns
     ((window_start, window_end), None) for the first kpi_a window that clusters
