@@ -169,7 +169,8 @@ order_region AS (
 )
 SELECT d.episode_id, d.day_offset, r.region,
        COALESCE(SUM(orr.quantity * orr.unit_price), 0) AS revenue,
-       COUNT(orr.region) AS orders_count
+       COUNT(orr.region) AS orders_count,
+       COALESCE(SUM(orr.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN regions r ON r.episode_id = d.episode_id
 LEFT JOIN order_region orr
@@ -193,7 +194,8 @@ order_segment AS (
 )
 SELECT d.episode_id, d.day_offset, s.segment,
        COALESCE(SUM(os.quantity * os.unit_price), 0) AS revenue,
-       COUNT(os.segment) AS orders_count
+       COUNT(os.segment) AS orders_count,
+       COALESCE(SUM(os.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN segments s ON s.episode_id = d.episode_id
 LEFT JOIN order_segment os
@@ -221,7 +223,8 @@ order_category AS (
 )
 SELECT d.episode_id, d.day_offset, c.category,
        COALESCE(SUM(oc.quantity * oc.unit_price), 0) AS revenue,
-       COUNT(oc.category) AS orders_count
+       COUNT(oc.category) AS orders_count,
+       COALESCE(SUM(oc.quantity), 0) AS units_sold
 FROM daily_state d
 JOIN categories c ON c.episode_id = d.episode_id
 LEFT JOIN order_category oc

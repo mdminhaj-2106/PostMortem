@@ -7,6 +7,8 @@ tied to one product, so there's no v_billing_active_customers_by_product view to
 DIMENSION_APPLICABILITY = {
     "revenue": ["region", "segment", "product"],
     "active_customers_purchased_30d": ["region", "segment"],
+    "orders_count": ["region", "segment", "product"],
+    "units_sold": ["region", "segment", "product"],
 }
 
 

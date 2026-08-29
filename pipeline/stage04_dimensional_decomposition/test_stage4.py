@@ -211,6 +211,20 @@ def test_run_stage4_covers_every_applicable_slice_and_allows_real_percentiles(cu
     assert sp.unusualness_percentile is not None, "an ELIGIBLE slice should carry a real percentile"
 
 
+def test_orders_count_and_units_sold_actually_get_sliced(cur):
+    # Task 6: orders_count/units_sold were declared with dimensions and wired into
+    # slice_fetcher's view map. A passing declaration isn't proof the wiring is real --
+    # assert real slice rows come back, not just that dimension_config allows them.
+    stage3_results = stage3_bridge_run_stage3(cur, day_range=range(80, 120))
+    late = next(r for r in stage3_results if "orders_count" in r.kpi_names and "units_sold" in r.kpi_names)
+
+    result = run_stage4(cur, 1, late)
+    seen = {(s.kpi_name, s.dimension) for s in result.slices}
+    for kpi in ("orders_count", "units_sold"):
+        for dim in ("region", "segment", "product"):
+            assert (kpi, dim) in seen, f"missing ({kpi}, {dim}) slice -- Task 6 wiring not live"
+
+
 def stage3_bridge_run_stage3(cur, day_range):
     import stage3_bridge
 
@@ -236,6 +250,7 @@ if __name__ == "__main__":
         with conn.cursor() as cur:
             test_short_trailing_history_gates_percentile_for_every_slice(cur)
             test_run_stage4_covers_every_applicable_slice_and_allows_real_percentiles(cur)
+            test_orders_count_and_units_sold_actually_get_sliced(cur)
     finally:
         conn.close()
     print("OK")
