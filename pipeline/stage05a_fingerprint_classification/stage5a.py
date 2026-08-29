@@ -60,9 +60,27 @@ def run_stage5a(cur, episode_id, stage3_result, decomposition_result):
     )
 
 
+def run_stage5a_and_5c(cur, episode_id, stage3_result, decomposition_result, reference):
+    """Serves a cluster whichever way its decomposition actually lands: 5a's own
+    classifier already ignores LIMITED_HISTORY/INSUFFICIENT_DATA product slices
+    (signatures.product_concentration), so it's always safe to run on the full
+    decomposition_result; 5c separately picks up exactly the slices 5a declined.
+    Real live data makes this uniform per (kpi, dimension) -- see
+    .claude/plans/stage5c-cold-start-analogy-handler.md's header -- but nothing here
+    assumes that; a genuinely mixed decomposition would route correctly too. The two
+    results are returned as a pair and must never be merged into one confidence number
+    (design doc's still-valid rule, carried into Stage 5c's own contract)."""
+    import stage5c_bridge  # lazy -- only callers who want cold-start routing pay for this bridge
+
+    fingerprint_result = run_stage5a(cur, episode_id, stage3_result, decomposition_result)
+    cold_start_result = stage5c_bridge.run_stage5c(cur, episode_id, decomposition_result, reference)
+    return fingerprint_result, cold_start_result
+
+
 def main():
     import stage3_bridge  # imported lazily -- CLI-only, same as stage4.py's own bridge import
     import stage4_bridge
+    import stage5c_bridge
 
     parser = argparse.ArgumentParser(description="Run Stage 5a fingerprint classification.")
     parser.add_argument("--episode-id", type=int, required=True)
@@ -78,9 +96,16 @@ def main():
                 return
             stage3_result = stage3_results[0]
             decomposition_result = stage4_bridge.run_stage4(cur, args.episode_id, stage3_result)
+            reference = stage5c_bridge.load_reference()
             print(f"classifying: {stage3_result}")
-            result = run_stage5a(cur, args.episode_id, stage3_result, decomposition_result)
-            print(result)
+            fingerprint_result, cold_start_result = run_stage5a_and_5c(
+                cur, args.episode_id, stage3_result, decomposition_result, reference
+            )
+            print(fingerprint_result)
+            if cold_start_result.attributions:
+                print(f"cold-start (borrowed, {len(cold_start_result.attributions)} thin slice(s)):")
+                for a in cold_start_result.attributions:
+                    print(f"  {a}")
     finally:
         conn.close()
 

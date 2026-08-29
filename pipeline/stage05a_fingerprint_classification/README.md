@@ -21,6 +21,8 @@
 - `stage5a.py` -- orchestrator (`run_stage5a`) + CLI entrypoint
 - `eval_against_ground_truth.py` -- offline-only accuracy/confusion scoring against `injected_events`; never imported by any runtime module
 
+**Cold-start plumbing added once Stage 5c existed (this slice, follow-up to the original build):** `product_concentration` now excludes `LIMITED_HISTORY`/`INSUFFICIENT_DATA` product slices -- previously it fingerprinted whatever `deviation_pct` Stage 4 attached to a thin slice, even though Stage 4 itself already refused to attach a percentile to it. `stage5c_bridge.py` re-exports Stage 5c's real `run_stage5c`/`load_reference`/`build_reference` (a sideways bridge -- 5a and 5c are siblings off Stage 4, not a downstream/upstream pair, same reasoning Stage 5b already used bridging into 5a despite the numeric order), and `stage5a.py`'s new `run_stage5a_and_5c(cur, episode_id, stage3_result, decomposition_result, reference)` runs both and returns `(FingerprintResult, Stage5cResult)` as a pair -- never merged into one confidence number. In practice Stage 4's eligibility is uniform per `(kpi, dimension)` across a whole decomposition (see `stage05c_cold_start_analogy_handler/README.md`), so a cluster ends up served by one or the other, not truly mixed -- but the routing itself is per-slice, not a hardcoded mode flag, so it stays correct if that ever stops holding.
+
 **A real finding from live verification, not the plan's a-priori assumption:** most real `inventory_shortage` events never clear Stage 2/3's company-wide significance bar at all -- a single product's weight cut is too small a fraction of total revenue/orders to register as a company-wide flagged window, even at `severe` severity. Live search across 7 episodes with a real `inventory_shortage` event found only episode 15 produces a Stage-3-flagged cluster that actually overlaps the event window (`cluster_15_93_94`, day 93-94) -- and episode 15 happens to have only 2 distinct product categories total, which is why `product_concentration`'s share metric clears the threshold so cleanly there (0.76) but would behave differently with a more typical product catalog. `test_stage5a.py`'s live check documents this fixture and why it had to be found empirically rather than assumed from any injected event.
 
 **`eval_against_ground_truth.py` — not completed at full scale, stated rather than hidden:** a `--n-episodes 30` run was started but takes 45-90+ minutes (each episode re-derives the full 5-KPI Stage 3 DAG walk, ~100-150s live) and was stopped before finishing given this project's time budget the night before submission; a second attempt also hit one transient Neon `SSL SYSCALL`/connection drop mid-run (not a code bug). `PRODUCT_CONCENTRATION_THRESHOLD` (`signatures.py`) therefore stays at the plan's stated starting value (`0.6`), uncalibrated against a real accuracy number — this is an open gap, not a silently-skipped one (see Known gaps below). What *is* verified live: `test_stage5a.py`'s single real-episode check (episode 15, `cluster_15_93_94`) confirms the mechanism actually fires correctly (`inventory_shortage` at `HIGH` confidence, product-concentration share 0.76) — a real positive case, just not a full-dataset accuracy/confusion sweep.
@@ -31,7 +33,8 @@
 
 **Deferred, not implemented (per the plan, unchanged from the existing audit triage):**
 - **Tier B** -- a trained XGBoost + SHAP pipeline over the corrected 4-class taxonomy. Worth building with more time; this plan's ceiling analysis is the reason a heuristic was chosen deliberately, not for lack of time.
-- **Stage 5b** (confounded-cause decomposer) and **5c** (cold-start/analogy handler) -- 5a has no live `BRANCH_5B_CONFOUNDED`/`BRANCH_5C_COLD_START` destination, so on a split or cold-start signal it says so honestly (`LOW` confidence with an even split) rather than routing to a stage that doesn't exist.
+- **Stage 5b** (confounded-cause decomposer) -- 5a has no live `BRANCH_5B_CONFOUNDED` destination, so on a split signal it says so honestly (`LOW` confidence with an even split) rather than routing to a stage that doesn't dispatch from here. (Stage 5b exists and is built, just not wired as an automatic dispatch target from 5a's own code.)
+- **Stage 5c** (cold-start/analogy handler) is no longer undispatched -- see the cold-start plumbing note above. `run_stage5a_and_5c` is opt-in (a separate function from `run_stage5a`), not automatically invoked by `run_stage5a` itself.
 - FastAPI wiring -- same phased-build reasoning as Stages 1-4.
 - **A fifth stacked cross-stage import** (Stage 5a -> Stage 2 directly via `onset_fetcher.py`, plus Stage 5a -> Stage 3 -> Stage 2 and Stage 5a -> Stage 4 -> Stage 2/Stage 3 for the CLI/eval paths) via the `sys.path`/`sys.modules`-eviction pattern. `architecture.md`'s Known Risks already flagged this as overdue at the fourth stage; a real package is a stronger case now, still not folded into this slice.
 
@@ -39,7 +42,8 @@
 ```bash
 cd pipeline/stage05a_fingerprint_classification
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python test_stage5a.py                          # must print OK (offline + 1 live Stage 3->4->5a run)
-.venv/bin/python stage5a.py --episode-id 1
+.venv/bin/python test_stage5a.py                          # must print OK (offline + live Stage 3->4->5a(+5c) runs)
+.venv/bin/python stage5a.py --episode-id 1                # loads stage05c_.../reference/artifacts/reference.json;
+                                                            # build it first (see that stage's README) if missing
 .venv/bin/python eval_against_ground_truth.py --n-episodes 30   # offline-only, prints real accuracy + confusion table
 ```

@@ -24,15 +24,28 @@ KPI_SHIFT_FLAT_THRESHOLD = 0.02
 ONSET_STEP_RATIO = 0.7
 ONSET_RAMP_RATIO = 0.4
 
+# A LIMITED_HISTORY/INSUFFICIENT_DATA slice's deviation_pct is computed from whatever
+# partial residual data exists in the window (decomposer.py never nulls it, only
+# unusualness_percentile) -- real, but not a trustworthy shape to fingerprint against.
+# Stage 4's own eligibility gate already draws this exact line (its
+# _NO_FABRICATED_PERCENTILE); product_concentration must draw it too, or it fabricates
+# a HIGH-confidence cause from a slice Stage 4 itself refused to score. These slices are
+# Stage 5c's job, not 5a's -- see .claude/plans/stage5c-cold-start-analogy-handler.md.
+_THIN_ELIGIBILITIES = ("LIMITED_HISTORY", "INSUFFICIENT_DATA")
+
 
 def product_concentration(decomposition_result):
     """(slice_value_or_None, score). score is the winning slice's share of total
-    |deviation_pct| among that KPI's OBSERVED product slices, when it clears the margin
-    over the runner-up. Real, near-deterministic signal: only inventory_shortage ever
-    touches `product` (generate.py cuts product_weights[affected_product_idx])."""
+    |deviation_pct| among that KPI's OBSERVED, non-thin product slices, when it clears
+    the margin over the runner-up. Real, near-deterministic signal: only
+    inventory_shortage ever touches `product` (generate.py cuts
+    product_weights[affected_product_idx])."""
     by_kpi = {}
     for s in decomposition_result.slices:
-        if s.dimension != "product" or s.observation_status != "OBSERVED" or s.deviation_pct is None:
+        if (
+            s.dimension != "product" or s.observation_status != "OBSERVED"
+            or s.deviation_pct is None or s.eligibility in _THIN_ELIGIBILITIES
+        ):
             continue
         by_kpi.setdefault(s.kpi_name, []).append(s)
 
