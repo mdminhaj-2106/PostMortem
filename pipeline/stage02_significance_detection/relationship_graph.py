@@ -6,8 +6,31 @@ the richer Traffic->Conversion->Orders->Revenue graph the design doc illustrates
 (plan Risk #2) -- extend once Stage 1 reconciles more KPIs.
 """
 
+# F14 turned this from one edge into a real DAG. Every edge below is a structural fact
+# about how this dataset is generated, not an inferred correlation:
+#   revenue = orders_count x avg_order_value   (an identity, from atomic orders)
+#   more active customers -> more orders        (orders come from purchasing customers)
+#   more orders -> more units                   (units_sold = SUM(quantity) over orders)
+#
+#     active_customers ──> orders_count ──> revenue
+#                     └──────────────┐      ▲
+#                                    └──> units_sold
+#     avg_order_value ─────────────────────┘
+#
+# Direction/lag annotations for Stage 3's co-movement test live in stage03/dag.py; this
+# module declares only WHAT relates to what, which is all Layer 4 needs.
 RELATIONSHIPS = {
-    "active_customers_purchased_30d": [("revenue", "UPSTREAM_DRIVER")],
+    "active_customers_purchased_30d": [
+        ("orders_count", "UPSTREAM_DRIVER"),
+        ("revenue", "UPSTREAM_DRIVER"),
+    ],
+    "orders_count": [
+        ("revenue", "UPSTREAM_DRIVER"),
+        ("units_sold", "UPSTREAM_DRIVER"),
+    ],
+    "avg_order_value": [
+        ("revenue", "UPSTREAM_DRIVER"),
+    ],
 }
 
 

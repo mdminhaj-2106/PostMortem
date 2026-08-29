@@ -106,6 +106,21 @@ def test_classification_trajectory():
     assert states[12] == "NORMAL"
 
 
+def test_every_declared_kpi_is_declared_everywhere():
+    """Audit findings F9/F14. A KPI has to appear in FOUR places to work, and missing one
+    fails silently rather than loudly -- F9 was exactly this (materiality keyed on a name
+    that never existed, so every real call fell through to the wrong threshold). Offline,
+    so it costs nothing to keep."""
+    for kpi_name in ingest.KPI_NAMES:
+        assert kpi_name in business_importance.CRITICALITY, \
+            f"{kpi_name} has no declared business criticality"
+        assert (kpi_name in ingest.stage1_reconcile.SOURCES
+                or kpi_name.startswith("active_customers_")), \
+            f"{kpi_name} is in KPI_NAMES but Stage 1 has no source registry entry for it"
+        assert kpi_name in ingest.stage1_reconcile.materiality.DEFAULT_THRESHOLDS, \
+            f"{kpi_name} has no declared materiality threshold"
+
+
 # --- live DB ---
 
 def test_timeline_cache_reuses_days_without_refetching(cur):
@@ -178,6 +193,7 @@ if __name__ == "__main__":
     test_business_importance_declared_evidence()
     test_relevance_matrix_rows()
     test_classification_trajectory()
+    test_every_declared_kpi_is_declared_everywhere()
 
     load_dotenv()
     conn = psycopg2.connect(os.environ["DATABASE_URL"])

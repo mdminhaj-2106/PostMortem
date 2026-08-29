@@ -12,11 +12,15 @@
 -- billing_system: daily, UTC day, exact revenue/orders/AOV. Purchase-based "active".
 -- Total-gap-capable (a suppressed day has no row at all, not a zero).
 
+-- units_sold appended last on purpose: CREATE OR REPLACE VIEW can only add columns at
+-- the end, never reorder or retype existing ones, so this stays a safe in-place replace
+-- against the shared DB (audit finding F14 -- KPI expansion 2 -> 5).
 CREATE OR REPLACE VIEW v_billing_daily_revenue AS
 SELECT o.episode_id, o.day_offset,
        SUM(o.quantity * o.unit_price) AS revenue,
        COUNT(*) AS orders_count,
-       ROUND(AVG(o.unit_price * o.quantity)::numeric, 2) AS avg_order_value
+       ROUND(AVG(o.unit_price * o.quantity)::numeric, 2) AS avg_order_value,
+       SUM(o.quantity) AS units_sold
 FROM orders o
 WHERE NOT EXISTS (
     SELECT 1 FROM source_outages so

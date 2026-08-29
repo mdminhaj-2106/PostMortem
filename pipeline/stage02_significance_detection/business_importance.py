@@ -9,6 +9,12 @@ import relationship_graph
 CRITICALITY = {
     "revenue": "CRITICAL",
     "active_customers_purchased_30d": "HIGH",
+    # F14's KPIs 3-5. orders_count is the volume driver revenue decomposes into, so it
+    # carries the same urgency one step upstream; avg_order_value and units_sold are mix
+    # signals -- they explain HOW revenue moved rather than being the loss themselves.
+    "orders_count": "HIGH",
+    "avg_order_value": "MEDIUM",
+    "units_sold": "MEDIUM",
 }
 
 

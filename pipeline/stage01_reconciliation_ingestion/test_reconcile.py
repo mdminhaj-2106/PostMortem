@@ -15,6 +15,7 @@ import identity_resolution
 import materiality
 import semantic_contract
 from models import ReconciledValue
+import reconcile as reconcile_module
 from reconcile import (
     _fetch_billing_revenue,
     _fetch_episode_start_date,
@@ -59,6 +60,42 @@ def test_bias_correction_matches_views_sql():
     assert round(corrected, 2) == 100.0
     # no declared bias -- passes through
     assert semantic_contract.apply_bias_correction("billing_system", "revenue", 50.0) == 50.0
+
+
+def test_bias_correction_is_read_from_the_contract_not_hardcoded():
+    """Audit finding F8. The factor used to live in module constants beside a prose
+    description in SEMANTIC_CONTRACT -- two sources of truth hand-synced. Editing the
+    contract must now change the arithmetic; if it doesn't, the hardcoded branch is back."""
+    entry = semantic_contract.SEMANTIC_CONTRACT["marketing_system"]["metrics"]["attributed_revenue"]
+    original = entry["bias_factor"]
+    try:
+        entry["bias_factor"] = {"before_midpoint": 0.5, "from_midpoint": 0.5}
+        assert semantic_contract.apply_bias_correction(
+            "marketing_system", "attributed_revenue", 100.0, day_offset=0, n_days=100
+        ) == 200.0, "apply_bias_correction ignored the contract"
+    finally:
+        entry["bias_factor"] = original
+
+    # A metric with no declared bias passes through untouched...
+    assert semantic_contract.apply_bias_correction("billing_system", "revenue", 42.0) == 42.0
+    # ...and an undeclared pair raises instead of silently assuming "no bias" (F9 class).
+    try:
+        semantic_contract.apply_bias_correction("billing_system", "not_a_metric", 1.0)
+        raise AssertionError("expected KeyError for an undeclared source/metric")
+    except KeyError:
+        pass
+
+
+def test_source_registry_covers_every_declared_kpi():
+    """Audit finding F7/F14. Every KPI in the registry needs a materiality threshold and
+    a contract entry for each of its sources, or it silently misbehaves at runtime."""
+    for kpi_name, entries in reconcile_module.SOURCES.items():
+        assert kpi_name in materiality.DEFAULT_THRESHOLDS, f"no materiality threshold for {kpi_name}"
+        assert entries, f"{kpi_name} declares no sources"
+        for source_name, view, column in entries:
+            contract = semantic_contract.metric_contract(source_name, column)
+            assert "bias_factor" in contract, f"{source_name}.{column} has no bias_factor declared"
+            assert view.startswith("v_"), f"{view} does not look like a Layer 2 view"
 
 
 def test_reconciled_value_validates_tier():
@@ -197,6 +234,8 @@ if __name__ == "__main__":
     test_calendar_bucket_iso_week()
     test_calendar_bucket_billing_cycle_month()
     test_bias_correction_matches_views_sql()
+    test_bias_correction_is_read_from_the_contract_not_hardcoded()
+    test_source_registry_covers_every_declared_kpi()
     test_reconciled_value_validates_tier()
     test_identity_resolution_zones()
 

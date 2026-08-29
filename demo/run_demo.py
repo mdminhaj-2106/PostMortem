@@ -57,6 +57,15 @@ reconcile = importlib.import_module("reconcile")
 with telemetry.stage("Stage 1 - reconciliation"):
     rv = reconcile.reconcile_conflicting_values(cur, EPISODE_ID, EVENT_START)
 print(rv)
+
+# All registry-declared KPIs through the ONE parameterized reconciler (F7/F14) -- adding
+# a KPI is a row in reconcile.SOURCES, not another bespoke function.
+print(f"\nAll {len(reconcile.SOURCES)} registry-declared KPIs reconciled on day {EVENT_START} "
+      f"(+ active_customers_purchased_30d via Scenario 2 = 5 KPIs):")
+print(f"  {'kpi':<20} {'value':>12}  {'tier':<14} sources")
+for kpi_name in reconcile.SOURCES:
+    r = reconcile.reconcile(cur, EPISODE_ID, EVENT_START, kpi_name)
+    print(f"  {kpi_name:<20} {r.value:>12.2f}  {r.confidence_tier:<14} {r.source_provenance}")
 sys.path.remove(STAGE1_DIR)
 for name in ("reconcile", "models", "materiality", "calendar_dimension", "semantic_contract"):
     sys.modules.pop(name, None)

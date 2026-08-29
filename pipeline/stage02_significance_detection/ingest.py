@@ -36,7 +36,19 @@ def _import_stage1_reconcile():
 
 stage1_reconcile = _import_stage1_reconcile()
 
-KPI_NAMES = ("revenue", "active_customers_purchased_30d")
+# Audit finding F14: the brief's minimum is 3-5 KPIs and this was 2. KPIs 3-5 come from
+# columns that already existed in v_billing_daily_revenue (orders_count, avg_order_value)
+# plus one appended column (units_sold) -- no new reconciliation logic, they are just
+# declared in Stage 1's SOURCES registry (F7). Every declaration site must agree or you
+# get an F9-class silent bug: this tuple, Stage 1's SOURCES and DEFAULT_THRESHOLDS,
+# business_importance.CRITICALITY, and stage04's DIMENSION_APPLICABILITY.
+KPI_NAMES = (
+    "revenue",
+    "active_customers_purchased_30d",
+    "orders_count",
+    "avg_order_value",
+    "units_sold",
+)
 
 
 _reconciled_day_cache = {}  # (episode_id, kpi_name, day_offset) -> ReconciledValue_or_None
@@ -50,12 +62,17 @@ def clear_cache():
 
 
 def _reconcile_day(cur, episode_id, kpi_name, day_offset):
-    if kpi_name == "revenue":
-        return stage1_reconcile.reconcile_conflicting_values(cur, episode_id, day_offset)
+    """Registry-declared KPIs go through Stage 1's one parameterized reconciler (F7).
+    active_customers_* is not in that registry on purpose: Scenario 2 emits two
+    genuinely different constructs from one call (purchased-based vs interaction-based
+    'active'), which is a different shape from "one KPI, N sources disagreeing" and must
+    not be collapsed into it."""
+    if kpi_name in stage1_reconcile.SOURCES:
+        return stage1_reconcile.reconcile(cur, episode_id, day_offset, kpi_name)
     rows = stage1_reconcile.reconcile_definitional_active_customers(
         cur, episode_id, day_offset, _start_date(cur, episode_id)
     )
-    return next((r for r in rows if r.kpi_name == "active_customers_purchased_30d"), None)
+    return next((r for r in rows if r.kpi_name == kpi_name), None)
 
 
 def load_kpi_timeline(cur, episode_id, kpi_name, day_range):
