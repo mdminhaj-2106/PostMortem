@@ -66,6 +66,17 @@ print(f"  {'kpi':<20} {'value':>12}  {'tier':<14} sources")
 for kpi_name in reconcile.SOURCES:
     r = reconcile.reconcile(cur, EPISODE_ID, EVENT_START, kpi_name)
     print(f"  {kpi_name:<20} {r.value:>12.2f}  {r.confidence_tier:<14} {r.source_provenance}")
+
+# Scenario 6 -- reported as data quality, deliberately NOT applied to any KPI's
+# confidence: no view joins through crm_account_id, so claiming it affects a value
+# would be inventing a dependency (F4).
+identity = importlib.import_module("identity_resolution")
+summary = identity.summarize(cur, EPISODE_ID)
+print(f"\nScenario 6 -- identity resolution: {summary['total_mappings']} crm mappings, "
+      f"{summary['counts']['ambiguous']} ambiguous ({summary['ambiguous_rate']:.1%})")
+print("  reported, not applied: nothing downstream joins through crm_account_id yet.")
+print("  With one identifying field, any mismatch is ambiguous by construction --")
+print("  under-merging is the safe default; an over-merge silently corrupts evidence.")
 sys.path.remove(STAGE1_DIR)
 for name in ("reconcile", "models", "materiality", "calendar_dimension", "semantic_contract"):
     sys.modules.pop(name, None)

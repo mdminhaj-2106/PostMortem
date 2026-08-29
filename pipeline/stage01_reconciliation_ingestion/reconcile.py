@@ -14,6 +14,7 @@ import psycopg2
 from dotenv import load_dotenv
 
 import calendar_dimension
+import identity_resolution
 import materiality
 import semantic_contract
 from models import ReconciledValue
@@ -390,7 +391,8 @@ def main():
     parser.add_argument("--episode-id", type=int, required=True)
     parser.add_argument("--day-offset", type=int, required=True)
     parser.add_argument(
-        "--kpi", choices=["revenue", "active_customers_definitional", "active_customers_calendar"],
+        "--kpi",
+        choices=sorted(SOURCES) + ["active_customers_definitional", "active_customers_calendar"],
         default="revenue",
     )
     args = parser.parse_args()
@@ -398,8 +400,17 @@ def main():
     conn = _connect()
     try:
         with conn.cursor() as cur:
-            if args.kpi == "revenue":
-                print(reconcile_conflicting_values(cur, args.episode_id, args.day_offset))
+            # Scenario 6's identity-quality report, printed on every run so it is
+            # actually exercised rather than living only in its own test (F4).
+            summary = identity_resolution.summarize(cur, args.episode_id)
+            print(
+                f"identity resolution (Scenario 6): {summary['total_mappings']} crm mappings, "
+                f"{summary['counts']['ambiguous']} ambiguous "
+                f"({summary['ambiguous_rate']:.1%}) -- reported, not applied: no KPI joins "
+                f"through crm_account_id"
+            )
+            if args.kpi in SOURCES:
+                print(reconcile(cur, args.episode_id, args.day_offset, args.kpi))
             elif args.kpi == "active_customers_definitional":
                 start_date = _fetch_episode_start_date(cur, args.episode_id)
                 for row in reconcile_definitional_active_customers(cur, args.episode_id, args.day_offset, start_date):

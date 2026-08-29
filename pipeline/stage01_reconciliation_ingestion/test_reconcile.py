@@ -112,6 +112,14 @@ def test_identity_resolution_zones():
     assert identity_resolution.score_match(5, 6) == "ambiguous"  # near-miss
     assert identity_resolution.score_match(5, 900005) == "ambiguous"  # duplicate
 
+    # Audit finding F4: ZONES declared an "auto_reject" that score_match could never
+    # return. Every declared zone must be reachable -- declaring one the code cannot
+    # produce overstates the machinery.
+    assert "auto_reject" not in identity_resolution.ZONES
+    produced = {identity_resolution.score_match(a, b) for a, b in [(5, 5), (5, 6), (5, 900005)]}
+    assert produced == set(identity_resolution.ZONES), \
+        f"ZONES {identity_resolution.ZONES} does not match what score_match can produce: {produced}"
+
 
 # --- live DB ---
 
@@ -242,8 +250,19 @@ def test_scenario6_identity_flags(cur):
     episode_id = cur.fetchone()[0]
     results = identity_resolution.resolve_customer_identities(cur, episode_id)
 
-    duplicates = [r for r in results if r["crm_account_id"] >= 900000]
-    near_misses = [r for r in results if r["crm_account_id"] != r["customer_id"] and r["crm_account_id"] < 900000]
+    # Derive the synthetic-duplicate boundary the same way v_crm_customer_mapping does.
+    # This used to hardcode 900000, which stopped being the offset when F2 replaced it
+    # with MAX(customer_id) -- real ids run past 900000, so a real high-id customer would
+    # be counted as a synthetic duplicate. It only kept passing because episode 1's ids
+    # happen to sit below the old constant.
+    cur.execute("SELECT COALESCE(MAX(customer_id), 0) FROM customers")
+    duplicate_threshold = cur.fetchone()[0]
+
+    duplicates = [r for r in results if r["crm_account_id"] > duplicate_threshold]
+    near_misses = [
+        r for r in results
+        if r["crm_account_id"] != r["customer_id"] and r["crm_account_id"] <= duplicate_threshold
+    ]
     exact = [r for r in results if r["crm_account_id"] == r["customer_id"]]
 
     assert duplicates, "expected some synthetic duplicate crm_account_ids"
@@ -251,6 +270,26 @@ def test_scenario6_identity_flags(cur):
     assert all(r["zone"] == "ambiguous" for r in duplicates), "duplicates must not be silently auto-merged"
     assert all(r["zone"] == "ambiguous" for r in near_misses), "near-misses must not be silently trusted"
     assert all(r["zone"] == "auto_merge" for r in exact)
+
+
+def test_identity_summary_runs_and_matches_injected_rate(cur):
+    """Audit finding F4: identity resolution had no caller but its own test, so Scenario
+    6 never actually ran. summarize() is now invoked on every Stage 1 CLI run.
+
+    views.sql injects ~2% near-misses and ~3% unmerged duplicates, so the ambiguous rate
+    should land near 5% -- a real cross-check against the generator's declared rates, not
+    just "the function returned something"."""
+    cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
+    episode_id = cur.fetchone()[0]
+
+    summary = identity_resolution.summarize(cur, episode_id)
+    assert summary["total_mappings"] > 0
+    assert sum(summary["counts"].values()) == summary["total_mappings"], "zone counts must partition"
+    assert set(summary["counts"]) == set(identity_resolution.ZONES)
+    assert 0.02 < summary["ambiguous_rate"] < 0.10, (
+        f"ambiguous rate {summary['ambiguous_rate']:.3f} is far from the ~5% views.sql "
+        f"injects (2% near-miss + 3% duplicate) -- the mapping view or the scorer changed"
+    )
 
 
 if __name__ == "__main__":
@@ -275,6 +314,7 @@ if __name__ == "__main__":
             test_weekly_snapshot_marks_carried_forward_days(cur)
             test_scenario5_calendar_alignment(cur)
             test_scenario6_identity_flags(cur)
+            test_identity_summary_runs_and_matches_injected_rate(cur)
     finally:
         conn.close()
     print("OK")
