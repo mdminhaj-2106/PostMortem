@@ -167,6 +167,38 @@ def test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur):
         "daily-grain KPI regressed -- the imputation flag change leaked past the crm rows"
 
 
+def test_calendar_misalignment_reaches_the_pipeline(cur):
+    """Audit finding F5. Scenario 5 was reachable only from its own test and the Stage 1
+    CLI, so no Stage 2+ ever saw a calendar-aligned value. Asserts an output that can
+    only exist if the wiring is real -- the same acceptance-criterion shape F3 needed.
+
+    Corroboration must appear on billing-cycle END days and nowhere else: marketing's
+    snapshot covers the same 30-day window as billing's trailing count only on that day,
+    so a cross-check on any other day would be comparing two different windows."""
+    day_range = range(20, 50)  # contains episode 8's first cycle end (day 44)
+    timeline = ingest.load_kpi_timeline(cur, 8, "active_customers_purchased_30d", day_range)
+    start_date = ingest._start_date(cur, 8)
+
+    cross_checked = [
+        d for d, rv in timeline
+        if rv is not None and "marketing_system" in rv.source_provenance
+    ]
+    assert cross_checked, "Scenario 5 never reached the pipeline timeline"
+
+    for day_offset in cross_checked:
+        assert ingest.stage1_reconcile.is_billing_cycle_end_day(cur, 8, day_offset, start_date), \
+            f"day {day_offset} was cross-checked but is not a billing-cycle end day"
+        rv = next(rv for d, rv in timeline if d == day_offset)
+        assert rv.imputation_method == "calendar_aligned_billing_cycle"
+        assert rv.uncertainty_width is not None
+
+    # every other day must be left alone, not silently cross-checked against a
+    # non-overlapping window
+    for day_offset, rv in timeline:
+        if rv is not None and day_offset not in cross_checked:
+            assert rv.imputation_method != "calendar_aligned_billing_cycle"
+
+
 def test_ingest_and_run_end_to_end(cur):
     for kpi in ingest.KPI_NAMES:
         results = run_stage2(cur, 1, kpi, day_range=range(0, 30))
@@ -220,6 +252,7 @@ if __name__ == "__main__":
         with conn.cursor() as cur:
             test_timeline_cache_reuses_days_without_refetching(cur)
             test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur)
+            test_calendar_misalignment_reaches_the_pipeline(cur)
             test_ingest_and_run_end_to_end(cur)
             test_scoring_reacts_to_a_real_injected_event(cur)
     finally:

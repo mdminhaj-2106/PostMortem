@@ -75,10 +75,25 @@ def _reconcile_day(cur, episode_id, kpi_name, day_offset):
     not be collapsed into it."""
     if kpi_name in stage1_reconcile.SOURCES:
         return stage1_reconcile.reconcile(cur, episode_id, day_offset, kpi_name)
+
+    start_date = _start_date(cur, episode_id)
     rows = stage1_reconcile.reconcile_definitional_active_customers(
-        cur, episode_id, day_offset, _start_date(cur, episode_id)
+        cur, episode_id, day_offset, start_date
     )
-    return next((r for r in rows if r.kpi_name == kpi_name), None)
+    rv = next((r for r in rows if r.kpi_name == kpi_name), None)
+
+    # Scenario 5 (F5). marketing reports the SAME construct as billing's purchase-based
+    # active_customers, on a 30-day billing cycle instead of daily -- so on the one day
+    # per cycle where the two windows line up, the daily value gets real cross-calendar
+    # corroboration. This scenario used to be reachable only from its own test and the
+    # Stage 1 CLI, so nothing downstream ever saw it. Only the purchase-based KPI is
+    # eligible: crm's interaction-based count is a different construct (Scenario 2) and
+    # must not be cross-checked against marketing's purchase-based snapshot.
+    if kpi_name == "active_customers_purchased_30d":
+        rv = stage1_reconcile.apply_calendar_cycle_cross_check(
+            cur, episode_id, day_offset, start_date, rv
+        )
+    return rv
 
 
 def load_kpi_timeline(cur, episode_id, kpi_name, day_range):

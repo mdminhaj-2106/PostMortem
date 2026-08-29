@@ -8,6 +8,7 @@ Usage:
 
 import argparse
 import os
+from dataclasses import replace
 
 import psycopg2
 from dotenv import load_dotenv
@@ -259,7 +260,65 @@ def reconcile_definitional_active_customers(cur, episode_id, day_offset, start_d
     return rows
 
 
-# --- Scenario 5 (calendar misalignment) ---
+# --- Scenario 5 (calendar misalignment), wired into the daily pipeline path ---
+
+def is_billing_cycle_end_day(cur, episode_id, day_offset, start_date):
+    """True on the one day per billing cycle where marketing's cycle snapshot and
+    billing's trailing-30-day count cover the SAME 30-day window."""
+    cycle_index = calendar_dimension.bucket_day(day_offset, "billing_cycle_month", start_date)
+    if cycle_index is None:
+        return False
+    return calendar_dimension.billing_cycle_end_day(cycle_index, _fetch_n_days(cur, episode_id)) == day_offset
+
+
+def apply_calendar_cycle_cross_check(cur, episode_id, day_offset, start_date, rv):
+    """Scenario 5 as it actually reaches Stages 2-4 (audit finding F5).
+
+    marketing reports active_customers on a 30-day billing cycle; billing reports it
+    daily. The Semantic Contract declares these the same construct differing only in
+    calendar grain, so they are directly comparable on exactly ONE day per cycle -- the
+    cycle's snapshot day. Comparing on any other day compares two different 30-day
+    windows and would manufacture a conflict that isn't there.
+
+    On that day the daily value gains genuine cross-source, cross-calendar corroboration.
+    Every other day passes through untouched -- there is nothing to compare against, and
+    inventing a comparison is exactly what this scenario exists to avoid.
+
+    Previously this whole scenario lived only in reconcile_calendar_misaligned_active_
+    customers, which nothing but its own test and the CLI ever called, so the pipeline
+    never saw it.
+    """
+    if rv is None or rv.value is None:
+        return rv
+    if not is_billing_cycle_end_day(cur, episode_id, day_offset, start_date):
+        return rv
+
+    cycle_index = calendar_dimension.bucket_day(day_offset, "billing_cycle_month", start_date)
+    marketing_value = _fetch_marketing_cycle_active_customers(cur, episode_id, cycle_index)
+    if marketing_value is None:
+        return rv  # marketing dark this cycle -- billing alone, unchanged
+
+    spread = abs(rv.value - marketing_value)
+    provenance = list(rv.source_provenance) + ["marketing_system"]
+
+    if materiality.is_material(rv.value, marketing_value, rv.kpi_name):
+        # A real cross-calendar disagreement. billing is the declared ground-truth-
+        # equivalent source, so anchor on it and widen uncertainty rather than average
+        # through it -- same ruling as Scenario 1's large-spread fork.
+        return replace(
+            rv, confidence_tier="triangulated", source_provenance=provenance,
+            imputation_method="calendar_aligned_billing_cycle", uncertainty_width=spread,
+        )
+
+    # Two independently-calendared sources agree -- that is real corroboration, so keep
+    # billing's exact value and record who confirmed it.
+    return replace(
+        rv, source_provenance=provenance,
+        imputation_method="calendar_aligned_billing_cycle", uncertainty_width=spread,
+    )
+
+
+# --- Scenario 5 (calendar misalignment), standalone cycle-grain form ---
 
 def reconcile_calendar_misaligned_active_customers(cur, episode_id, day_offset, start_date):
     """billing's daily and marketing's billing-cycle active_customers share the same
