@@ -39,25 +39,59 @@ stage1_reconcile = _import_stage1_reconcile()
 KPI_NAMES = ("revenue", "active_customers_purchased_30d")
 
 
+_reconciled_day_cache = {}  # (episode_id, kpi_name, day_offset) -> ReconciledValue_or_None
+
+
+def clear_cache():
+    """Drop the memoized days. Only needed if Layer 1/2 data changes inside a live
+    process (re-applying views.sql, regenerating an episode) -- normal runs never
+    need it, and the demo/tests do not call it."""
+    _reconciled_day_cache.clear()
+
+
+def _reconcile_day(cur, episode_id, kpi_name, day_offset):
+    if kpi_name == "revenue":
+        return stage1_reconcile.reconcile_conflicting_values(cur, episode_id, day_offset)
+    rows = stage1_reconcile.reconcile_definitional_active_customers(
+        cur, episode_id, day_offset, _start_date(cur, episode_id)
+    )
+    return next((r for r in rows if r.kpi_name == "active_customers_purchased_30d"), None)
+
+
 def load_kpi_timeline(cur, episode_id, kpi_name, day_range):
     """Returns [(day_offset, ReconciledValue_or_None), ...] for day_range (an
     iterable of day_offsets). A ReconciledValue with value=None (declared_unresolved)
     is kept, not dropped -- the eligibility gate needs to see the gap. Only truly
     absent rows (active_customers_purchased_30d has no billing row that day) become
-    a bare None."""
+    a bare None.
+
+    Memoized per DAY, not per timeline (audit finding F13). Each day costs real Neon
+    round trips through Stage 1's reconciliation, and one Stage 3 run re-requests the
+    same days five times over: run_stage2 three times (F3's two-pass relationship
+    wiring) plus load_dollar_residuals twice. Measured before this cache, Stage 3
+    alone was 111s of a 175s demo.
+
+    Keyed per day rather than per (episode, kpi, day_range) so partially-overlapping
+    ranges still hit -- test_stage3 asks for a different window per episode, and a
+    whole-range key would miss every time.
+
+    `cur` is deliberately not part of the key: this project runs one connection per
+    process against one database, and Layer 1 is generated once and frozen while
+    Layer 2 is a set of deterministic views over it, so the same (episode, kpi, day)
+    is the same value for the life of the process. clear_cache() exists for the one
+    case that isn't true. Unbounded by design -- a full 150-episode x 2-KPI x 120-day
+    sweep is ~36k small dataclasses, and no run in this repo is long-lived enough for
+    eviction to be worth the code.
+    """
     if kpi_name not in KPI_NAMES:
         raise ValueError(f"unknown kpi_name: {kpi_name!r}, expected one of {KPI_NAMES}")
 
     timeline = []
     for day_offset in day_range:
-        if kpi_name == "revenue":
-            rv = stage1_reconcile.reconcile_conflicting_values(cur, episode_id, day_offset)
-        else:
-            rows = stage1_reconcile.reconcile_definitional_active_customers(
-                cur, episode_id, day_offset, _start_date(cur, episode_id)
-            )
-            rv = next((r for r in rows if r.kpi_name == "active_customers_purchased_30d"), None)
-        timeline.append((day_offset, rv))
+        key = (episode_id, kpi_name, day_offset)
+        if key not in _reconciled_day_cache:
+            _reconciled_day_cache[key] = _reconcile_day(cur, episode_id, kpi_name, day_offset)
+        timeline.append((day_offset, _reconciled_day_cache[key]))
     return timeline
 
 

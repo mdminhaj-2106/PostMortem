@@ -108,6 +108,31 @@ def test_classification_trajectory():
 
 # --- live DB ---
 
+def test_timeline_cache_reuses_days_without_refetching(cur):
+    """Audit finding F13. A repeat request must not re-hit the DB, and a partially
+    overlapping range must fetch only the new days -- the whole point of keying the
+    cache per day rather than per (episode, kpi, day_range)."""
+    ingest.clear_cache()
+    days = list(range(10, 25))
+
+    first = ingest.load_kpi_timeline(cur, 1, "revenue", days)
+    after_first = len(ingest._reconciled_day_cache)
+    assert after_first == len(days), "every requested day should be cached once"
+
+    second = ingest.load_kpi_timeline(cur, 1, "revenue", days)
+    assert len(ingest._reconciled_day_cache) == after_first, "repeat request refetched"
+    assert ([(d, rv.value if rv else None) for d, rv in first]
+            == [(d, rv.value if rv else None) for d, rv in second]), "cache changed the values"
+
+    ingest.load_kpi_timeline(cur, 1, "revenue", range(20, 30))  # 20-24 overlap, 25-29 new
+    assert len(ingest._reconciled_day_cache) == after_first + 5, "overlap was refetched"
+
+    # a different KPI must not collide with revenue's cached days
+    ingest.load_kpi_timeline(cur, 1, "active_customers_purchased_30d", days)
+    assert len(ingest._reconciled_day_cache) == after_first + 5 + len(days)
+    ingest.clear_cache()
+
+
 def test_ingest_and_run_end_to_end(cur):
     for kpi in ingest.KPI_NAMES:
         results = run_stage2(cur, 1, kpi, day_range=range(0, 30))
@@ -158,6 +183,7 @@ if __name__ == "__main__":
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
         with conn.cursor() as cur:
+            test_timeline_cache_reuses_days_without_refetching(cur)
             test_ingest_and_run_end_to_end(cur)
             test_scoring_reacts_to_a_real_injected_event(cur)
     finally:
