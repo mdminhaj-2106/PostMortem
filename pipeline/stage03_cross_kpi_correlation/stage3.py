@@ -19,8 +19,7 @@ import priority
 import stage2_bridge
 from models import StageThreeResult
 
-_UPSTREAM_KPI = "active_customers_purchased_30d"
-_DOWNSTREAM_KPI = "revenue"
+_CONFIDENCE_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
 
 
 def _fetch_n_days(cur, episode_id):
@@ -28,78 +27,142 @@ def _fetch_n_days(cur, episode_id):
     return cur.fetchone()[0]
 
 
-def run_stage3(cur, episode_id, day_range=None):
+def _find(parent, node):
+    while parent[node] != node:
+        parent[node] = parent[parent[node]]
+        node = parent[node]
+    return node
+
+
+def _union(parent, a, b):
+    root_a, root_b = _find(parent, a), _find(parent, b)
+    if root_a != root_b:
+        parent[root_a] = root_b
+
+
+def _score_all_kpis(cur, episode_id, kpi_names, day_range):
+    """Two symmetric passes so every KPI's Layer 4/5 sees every OTHER KPI's candidate
+    days (F3). Pass 1 scores each KPI cold to discover its candidates; pass 2 rescores
+    each one with the union of everyone else's.
+
+    This replaces a hardcoded three-call upstream/downstream/upstream dance that only
+    worked for exactly two KPIs and made the second KPI's context depend on call order.
+    Cost is bounded by ingest's per-day cache: the DB work is one reconciliation per
+    (kpi, day) regardless of how many passes read it.
+    """
+    first_pass = {
+        kpi: stage2_bridge.load_stage2_results(cur, episode_id, kpi, day_range)
+        for kpi in kpi_names
+    }
+
+    candidates_by_day = {}
+    for kpi, results in first_pass.items():
+        for day_offset, kpis_that_day in stage2_bridge.candidate_days_by_day(results).items():
+            candidates_by_day.setdefault(day_offset, set()).update(kpis_that_day)
+
+    return {
+        kpi: stage2_bridge.load_stage2_results(
+            cur, episode_id, kpi, day_range,
+            other_kpi_candidates={
+                day: others - {kpi}
+                for day, others in candidates_by_day.items()
+                if others - {kpi}
+            },
+        )
+        for kpi in kpi_names
+    }
+
+
+def run_stage3(cur, episode_id, day_range=None, kpi_names=None):
+    """Walks the whole declared DAG rather than one hardcoded edge.
+
+    Was pinned to exactly two KPIs and one edge, which made the design doc's multi-path
+    combination (3+-member clusters) structurally unreachable rather than merely
+    unimplemented. With the real DAG a chain like
+    active_customers -> orders_count -> revenue can now surface as ONE incident with
+    three members instead of three unrelated findings.
+    """
     if day_range is None:
         day_range = range(_fetch_n_days(cur, episode_id))
     day_range = list(day_range)
+    kpi_names = list(kpi_names) if kpi_names else dag.kpis()
 
-    # Two passes so each KPI's Layer 4/5 can see the other's candidate days (F3): the
-    # upstream KPI is scored first with no context, its candidates are threaded into the
-    # downstream KPI's run, and the upstream KPI is then re-scored with the downstream
-    # candidates so the relationship evidence is symmetric rather than one-directional.
-    results = {}
-    residuals = {}
-    first_pass = stage2_bridge.load_stage2_results(cur, episode_id, _UPSTREAM_KPI, day_range)
-    upstream_candidates = stage2_bridge.candidate_days_by_day(first_pass)
+    results = _score_all_kpis(cur, episode_id, kpi_names, day_range)
+    residuals = {
+        kpi: stage2_bridge.load_dollar_residuals(cur, episode_id, kpi, day_range)
+        for kpi in kpi_names
+    }
+    windows = {kpi: grouping.find_flagged_windows(results[kpi]) for kpi in kpi_names}
+    confidence_by_day = {
+        kpi: {r.day_offset: r.confidence for r in results[kpi]} for kpi in kpi_names
+    }
 
-    results[_DOWNSTREAM_KPI] = stage2_bridge.load_stage2_results(
-        cur, episode_id, _DOWNSTREAM_KPI, day_range, other_kpi_candidates=upstream_candidates
-    )
-    downstream_candidates = stage2_bridge.candidate_days_by_day(results[_DOWNSTREAM_KPI])
-    results[_UPSTREAM_KPI] = stage2_bridge.load_stage2_results(
-        cur, episode_id, _UPSTREAM_KPI, day_range, other_kpi_candidates=downstream_candidates
-    )
+    # Every flagged window is a node; a confirmed DAG edge between two windows unions
+    # them. Connected components are the incidents -- which is what lets one cause
+    # showing up in three KPIs land as a single cluster rather than three.
+    nodes = [(kpi, window) for kpi in kpi_names for window in windows[kpi]]
+    parent = {node: node for node in nodes}
+    had_adjacent = {node: False for node in nodes}
 
-    for kpi in (_UPSTREAM_KPI, _DOWNSTREAM_KPI):
-        residuals[kpi] = stage2_bridge.load_dollar_residuals(cur, episode_id, kpi, day_range)
-
-    windows = {kpi: grouping.find_flagged_windows(results[kpi]) for kpi in results}
-    confidence_by_day = {kpi: {r.day_offset: r.confidence for r in results[kpi]} for kpi in results}
-    dag_entry = dag.related_kpis_with_lag(_UPSTREAM_KPI)[0]
-
-    clustered = {_UPSTREAM_KPI: set(), _DOWNSTREAM_KPI: set()}
-    leftover_reason = {}
-    out = []
-
-    for a_window in windows[_UPSTREAM_KPI]:
-        window, reason = grouping.attempt_cluster(
-            [a_window], residuals[_UPSTREAM_KPI], windows[_DOWNSTREAM_KPI], residuals[_DOWNSTREAM_KPI], dag_entry
-        )
-        if window is None:
-            leftover_reason[(_UPSTREAM_KPI, a_window)] = reason
+    for source, entry in dag.edges():
+        target = entry["target"]
+        if source not in windows or target not in windows:
             continue
-        w_start, w_end = window
-        clustered[_UPSTREAM_KPI].add(a_window)
-        b_window = next((b for b in windows[_DOWNSTREAM_KPI] if b[0] <= w_end and b[1] >= w_start), None)
-        if b_window:
-            clustered[_DOWNSTREAM_KPI].add(b_window)
+        for a_window in windows[source]:
+            for b_window in windows[target]:
+                linked, adjacent = grouping.windows_link(
+                    a_window, residuals[source], b_window, residuals[target], entry
+                )
+                if adjacent:
+                    had_adjacent[(source, a_window)] = True
+                    had_adjacent[(target, b_window)] = True
+                if linked:
+                    _union(parent, (source, a_window), (target, b_window))
 
-        kpi_names = [_UPSTREAM_KPI, _DOWNSTREAM_KPI]
-        priority_score, priority_basis = priority.score_priority(kpi_names, w_start, w_end, residuals)
-        confidence = confidence_by_day[_DOWNSTREAM_KPI].get(w_end, confidence_by_day[_UPSTREAM_KPI].get(a_window[1], "LOW"))
-        out.append(StageThreeResult(
-            episode_id=episode_id, cluster_id=f"cluster_{episode_id}_{w_start}_{w_end}",
-            kpi_names=kpi_names, window_start_day_offset=w_start, window_end_day_offset=w_end,
-            priority_score=priority_score, priority_basis=priority_basis,
-            confidence=confidence, grouping_basis="DAG_AND_CORRELATION",
-        ))
+    components = {}
+    for node in nodes:
+        components.setdefault(_find(parent, node), []).append(node)
 
-    for kpi in (_UPSTREAM_KPI, _DOWNSTREAM_KPI):
-        other = _DOWNSTREAM_KPI if kpi == _UPSTREAM_KPI else _UPSTREAM_KPI
-        for start, end in windows[kpi]:
-            if (start, end) in clustered[kpi]:
-                continue
-            confidence = confidence_by_day[kpi].get(end, "LOW")
-            priority_score, priority_basis = priority.score_priority([kpi], start, end, residuals)
-            basis = leftover_reason.get((kpi, (start, end)))
-            if basis is None:
-                basis = "SINGLE_KPI" if not windows[other] else "SEPARATE_NO_CORRELATION"
+    out = []
+    for members in components.values():
+        member_kpis = sorted({kpi for kpi, _ in members})
+        w_start = min(window[0] for _, window in members)
+        w_end = max(window[1] for _, window in members)
+        priority_score, priority_basis = priority.score_priority(
+            member_kpis, w_start, w_end, residuals
+        )
+        # Worst confidence among the members: a cluster is only as trustworthy as its
+        # shakiest evidence, and silently reporting the best one would overstate it.
+        confidence = min(
+            (confidence_by_day[kpi].get(window[1], "LOW") for kpi, window in members),
+            key=lambda c: _CONFIDENCE_RANK.get(c, 0),
+        )
+
+        if len(members) > 1:
             out.append(StageThreeResult(
-                episode_id=episode_id, cluster_id=None, kpi_names=[kpi],
-                window_start_day_offset=start, window_end_day_offset=end,
+                episode_id=episode_id, cluster_id=f"cluster_{episode_id}_{w_start}_{w_end}",
+                kpi_names=member_kpis, window_start_day_offset=w_start, window_end_day_offset=w_end,
                 priority_score=priority_score, priority_basis=priority_basis,
-                confidence=confidence, grouping_basis=basis,
+                confidence=confidence, grouping_basis="DAG_AND_CORRELATION",
             ))
+            continue
+
+        node = members[0]
+        kpi, _window = node
+        if not dag.related_kpis_with_lag(kpi) and not any(
+            e["target"] == kpi for _s, e in dag.edges()
+        ):
+            basis = "SINGLE_KPI"          # no DAG neighbour exists at all
+        elif had_adjacent[node]:
+            basis = "SEPARATE_NO_CORRELATION"   # something was in range; evidence refuted it
+        else:
+            basis = "SEPARATE_NO_ADJACENT_KPI"  # no neighbour was flagged nearby
+        out.append(StageThreeResult(
+            episode_id=episode_id, cluster_id=None, kpi_names=[kpi],
+            window_start_day_offset=w_start, window_end_day_offset=w_end,
+            priority_score=priority_score, priority_basis=priority_basis,
+            confidence=confidence, grouping_basis=basis,
+        ))
 
     return out
 
