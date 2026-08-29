@@ -73,7 +73,17 @@ WHERE NOT EXISTS (
 )
 GROUP BY w.episode_id, w.week_start_day_offset;
 
+-- The synthetic duplicate-account offset MUST stay clear of the real customer_id range,
+-- or a fake "second account" id silently equals some other real customer's id and the
+-- scenario's own answer key is corrupt. A hardcoded 900000 did exactly that: real ids
+-- run 1..1,237,910, so 348,123 synthetic duplicates collided with real customers
+-- (audit finding F2, .claude/plans/remediation-audit-and-fix-plan.md). Derive the
+-- offset from the actual max instead of hardcoding it, so it stays correct as the
+-- dataset grows.
 CREATE OR REPLACE VIEW v_crm_customer_mapping AS
+WITH id_space AS (
+    SELECT COALESCE(MAX(customer_id), 0) AS max_customer_id FROM customers
+)
 SELECT c.episode_id, c.customer_id,
     CASE WHEN mod(abs(hashtext(c.customer_id::text || ':mismatch')), 100) < 2
          THEN c.customer_id + 1  -- near-miss: silently mapped to the wrong customer
@@ -82,8 +92,8 @@ SELECT c.episode_id, c.customer_id,
 FROM customers c
 UNION ALL
 -- unmerged duplicates: ~3% of customers also show up under a second synthetic account id
-SELECT c.episode_id, c.customer_id, 900000 + c.customer_id AS crm_account_id
-FROM customers c
+SELECT c.episode_id, c.customer_id, s.max_customer_id + c.customer_id AS crm_account_id
+FROM customers c CROSS JOIN id_space s
 WHERE mod(abs(hashtext(c.customer_id::text || ':dup')), 100) < 3;
 
 -- marketing_system: billing-cycle month (30-day blocks starting day 15, not calendar

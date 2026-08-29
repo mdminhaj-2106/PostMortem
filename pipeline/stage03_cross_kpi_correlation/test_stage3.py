@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 import grouping
 import priority
+import stage2_bridge
 from models import StageThreeResult
 from stage3 import run_stage3
 
@@ -93,6 +94,22 @@ def test_confidence_gate_ranks_without_discarding():
     assert priority.gate_by_confidence("LOW") is False
 
 
+def test_rank_puts_biggest_dollar_impact_first_regardless_of_sign():
+    """Audit finding F1: priority_score is a SIGNED residual sum, so ranking on the
+    raw value buried the worst incidents at the bottom. A -$500k collapse must
+    outrank a +$900 blip."""
+    collapse = StageThreeResult(episode_id=1, cluster_id="collapse", kpi_names=["revenue"],
+                                 priority_score=-500000.0, priority_basis="OBSERVED",
+                                 confidence="HIGH", grouping_basis="SINGLE_KPI")
+    blip = StageThreeResult(episode_id=1, cluster_id="blip", kpi_names=["revenue"],
+                             priority_score=900.0, priority_basis="OBSERVED",
+                             confidence="HIGH", grouping_basis="SINGLE_KPI")
+    assert priority.rank([blip, collapse]) == [collapse, blip]
+    assert priority.direction(-500000.0) == "DROP"
+    assert priority.direction(900.0) == "SPIKE"
+    assert priority.direction(None) is None
+
+
 # --- live DB ---
 
 def test_run_stage3_end_to_end(cur):
@@ -140,6 +157,41 @@ def test_clusters_a_real_injected_event(cur):
     assert clustered, "Stage 3 should cluster revenue + active_customers with an observed priority score on at least one real event episode"
 
 
+def test_relationship_evidence_is_live_not_dead(cur):
+    """Audit finding F3's permanent regression guard. KNOWN_RELATIONSHIP evidence was
+    structurally unreachable -- verified live at 0 occurrences across 32 days -- for two
+    independent reasons, and BOTH have to stay fixed for this to pass:
+
+      1. no caller ever passed run_stage2's other_kpi_candidates, so a KPI never saw
+         that another KPI was also a candidate that day (fixed in stage2_bridge/stage3);
+      2. relationship_graph.RELATIONSHIPS declares only the forward driver -> driven
+         edge, so related_kpis('revenue') returned [] and the downstream KPI could
+         never match (fixed by deriving the reverse edge in related_kpis).
+
+    Asserting an output that only appears when the wiring is real is exactly the
+    acceptance-criterion shape §11 of the remediation plan makes mandatory: a passing
+    unit test is not evidence that a stage runs.
+
+    Episode 8, days 40-72 is the same window the audit used to reproduce the bug, so a
+    regression here reads directly against the recorded before/after."""
+    day_range = list(range(40, 72))
+    upstream = "active_customers_purchased_30d"
+
+    first_pass = stage2_bridge.load_stage2_results(cur, 8, upstream, day_range)
+    candidates = stage2_bridge.candidate_days_by_day(first_pass)
+    assert candidates, "expected the upstream KPI to have candidate days to thread through"
+
+    downstream = stage2_bridge.load_stage2_results(
+        cur, 8, "revenue", day_range, other_kpi_candidates=candidates
+    )
+    evidence_types = {e["type"] for r in downstream for e in r.business_importance_evidence}
+    assert "KNOWN_RELATIONSHIP" in evidence_types, (
+        "KNOWN_RELATIONSHIP evidence is dead again -- Stage 2's Layer 5 relationship "
+        f"graph is not reachable. Saw only: {evidence_types}"
+    )
+    assert any(r.cluster_id for r in downstream), "relationship evidence must produce a cluster_id"
+
+
 if __name__ == "__main__":
     test_find_flagged_windows()
     test_attempt_cluster_adjacent_and_correlated()
@@ -149,12 +201,14 @@ if __name__ == "__main__":
     test_priority_case1_observed()
     test_priority_case2_unavailable()
     test_confidence_gate_ranks_without_discarding()
+    test_rank_puts_biggest_dollar_impact_first_regardless_of_sign()
 
     load_dotenv()
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
         with conn.cursor() as cur:
             test_run_stage3_end_to_end(cur)
+            test_relationship_evidence_is_live_not_dead(cur)
             test_clusters_a_real_injected_event(cur)
     finally:
         conn.close()

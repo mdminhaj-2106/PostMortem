@@ -29,9 +29,25 @@ def score_priority(kpi_names, window_start, window_end, residuals_by_kpi):
     return sum(values), "OBSERVED"
 
 
+def direction(priority_score):
+    """DROP / SPIKE / None -- the sign that rank() deliberately discards, kept as a
+    separate field so downstream stages and narration can say which way it moved."""
+    if priority_score is None or priority_score == 0:
+        return None
+    return "DROP" if priority_score < 0 else "SPIKE"
+
+
 def rank(results):
     """Axis 1 as a gate, Axis 2 (priority_score) as the ranking scale (design doc
     §4) -- excludes LOW-confidence or unscored results from the ranking without
-    mutating or dropping them from the caller's own result list."""
+    mutating or dropping them from the caller's own result list.
+
+    Ranks by ABSOLUTE dollar impact, not the signed score: priority_score is a
+    signed residual sum, so a revenue collapse is a large negative and a small
+    upward blip is a small positive. Sorting on the raw signed value put the worst
+    incident last -- a -$500k collapse ranked below a +$900 blip (audit finding F1,
+    .claude/plans/remediation-audit-and-fix-plan.md). Materiality is magnitude:
+    a large unexplained spike warrants investigation just as much as a drop, and
+    direction() carries the sign forward for whoever needs it."""
     eligible = [r for r in results if gate_by_confidence(r.confidence) and r.priority_score is not None]
-    return sorted(eligible, key=lambda r: r.priority_score, reverse=True)
+    return sorted(eligible, key=lambda r: abs(r.priority_score), reverse=True)

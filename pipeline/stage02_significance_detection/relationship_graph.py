@@ -12,4 +12,20 @@ RELATIONSHIPS = {
 
 
 def related_kpis(kpi_name):
-    return RELATIONSHIPS.get(kpi_name, [])
+    """Both directions, from one declaration. RELATIONSHIPS declares only the
+    forward (driver -> driven) edge, so a lookup on the *driven* KPI used to return
+    [] -- meaning revenue could never see active_customers as related, and
+    KNOWN_RELATIONSHIP evidence stayed at 0 occurrences live even after Stage 3
+    correctly threaded the other KPI's candidate days through (audit finding F3,
+    .claude/plans/remediation-audit-and-fix-plan.md). Deriving the reverse edge
+    here rather than writing each edge twice keeps one source of truth: F14's
+    2 -> 7 KPI expansion adds ~6 edges, and hand-maintaining both directions is
+    the same silent-drift bug class as F9's out-of-sync threshold keys."""
+    forward = list(RELATIONSHIPS.get(kpi_name, []))
+    reverse = [
+        (driver, "DOWNSTREAM_OF")
+        for driver, edges in RELATIONSHIPS.items()
+        for target, _relationship in edges
+        if target == kpi_name
+    ]
+    return forward + reverse

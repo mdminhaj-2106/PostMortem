@@ -33,10 +33,24 @@ def run_stage3(cur, episode_id, day_range=None):
         day_range = range(_fetch_n_days(cur, episode_id))
     day_range = list(day_range)
 
+    # Two passes so each KPI's Layer 4/5 can see the other's candidate days (F3): the
+    # upstream KPI is scored first with no context, its candidates are threaded into the
+    # downstream KPI's run, and the upstream KPI is then re-scored with the downstream
+    # candidates so the relationship evidence is symmetric rather than one-directional.
     results = {}
     residuals = {}
+    first_pass = stage2_bridge.load_stage2_results(cur, episode_id, _UPSTREAM_KPI, day_range)
+    upstream_candidates = stage2_bridge.candidate_days_by_day(first_pass)
+
+    results[_DOWNSTREAM_KPI] = stage2_bridge.load_stage2_results(
+        cur, episode_id, _DOWNSTREAM_KPI, day_range, other_kpi_candidates=upstream_candidates
+    )
+    downstream_candidates = stage2_bridge.candidate_days_by_day(results[_DOWNSTREAM_KPI])
+    results[_UPSTREAM_KPI] = stage2_bridge.load_stage2_results(
+        cur, episode_id, _UPSTREAM_KPI, day_range, other_kpi_candidates=downstream_candidates
+    )
+
     for kpi in (_UPSTREAM_KPI, _DOWNSTREAM_KPI):
-        results[kpi] = stage2_bridge.load_stage2_results(cur, episode_id, kpi, day_range)
         residuals[kpi] = stage2_bridge.load_dollar_residuals(cur, episode_id, kpi, day_range)
 
     windows = {kpi: grouping.find_flagged_windows(results[kpi]) for kpi in results}
