@@ -15,7 +15,7 @@ import signatures
 from models import EVENT_TYPES, FingerprintResult
 from stage4_bridge import run_stage4
 from stage3_bridge import run_stage3
-from stage5a import run_stage5a
+from stage5a import run_stage5a, run_stage5a_and_5c
 
 # --- offline: models.py ---
 
@@ -55,12 +55,16 @@ def test_fingerprint_result_accepts_a_clean_ranked_dict():
 
 
 class _FakeSlice:
-    def __init__(self, kpi_name, dimension, slice_value, deviation_pct, observation_status="OBSERVED"):
+    def __init__(
+        self, kpi_name, dimension, slice_value, deviation_pct,
+        observation_status="OBSERVED", eligibility="ELIGIBLE",
+    ):
         self.kpi_name = kpi_name
         self.dimension = dimension
         self.slice_value = slice_value
         self.deviation_pct = deviation_pct
         self.observation_status = observation_status
+        self.eligibility = eligibility
 
 
 class _FakeDecomposition:
@@ -100,6 +104,31 @@ def test_product_concentration_ignores_unmeasured_slices():
     ]
     slice_value, _score = signatures.product_concentration(_FakeDecomposition(slices))
     assert slice_value is None, "one real slice alone can't demonstrate concentration over a runner-up"
+
+
+def test_product_concentration_excludes_thin_slices():
+    # Stage 4 still computes deviation_pct for LIMITED_HISTORY/INSUFFICIENT_DATA slices
+    # (only unusualness_percentile gets nulled) -- product_concentration must not treat
+    # that deviation as a trustworthy shape, or it fabricates a HIGH-confidence cause
+    # from data Stage 4 itself refused to score. These slices are Stage 5c's job.
+    slices = [
+        _FakeSlice("revenue", "product", "electronics", 0.9, eligibility="LIMITED_HISTORY"),
+        _FakeSlice("revenue", "product", "toys", 0.03, eligibility="LIMITED_HISTORY"),
+        _FakeSlice("revenue", "product", "books", 0.02, eligibility="INSUFFICIENT_DATA"),
+    ]
+    slice_value, score = signatures.product_concentration(_FakeDecomposition(slices))
+    assert slice_value is None and score == 0.0, "must decline rather than fingerprint thin slices"
+
+
+def test_product_concentration_still_fires_when_only_some_slices_are_thin():
+    slices = [
+        _FakeSlice("revenue", "product", "electronics", 0.9, eligibility="ELIGIBLE"),
+        _FakeSlice("revenue", "product", "toys", 0.03, eligibility="ELIGIBLE"),
+        _FakeSlice("revenue", "product", "books", 0.5, eligibility="LIMITED_HISTORY"),  # excluded
+    ]
+    slice_value, score = signatures.product_concentration(_FakeDecomposition(slices))
+    assert slice_value == "electronics"
+    assert score > signatures.PRODUCT_CONCENTRATION_THRESHOLD
 
 
 def test_dominant_kpi_shift_customers_first():
@@ -218,6 +247,34 @@ def test_run_stage5a_detects_inventory_shortage_on_a_real_episode(cur):
     assert abs(sum(result.cause_scores.values()) - 1.0) < 1e-9
 
 
+def test_run_stage5a_and_5c_serves_a_cold_start_cluster(cur):
+    """Episode 1, active_customers_purchased_30d, window 9-14 -- Stage 4's own
+    documented live finding: every region AND segment slice lands LIMITED_HISTORY
+    together (no product dimension on this KPI, so this exercises the region/segment
+    routing path; product-dimension thinness is covered offline by
+    test_product_concentration_excludes_thin_slices). run_stage5a still returns an
+    honest FingerprintResult (LOW confidence, no fabricated product signal); Stage 5c
+    picks up exactly the slices 5a declined, tagged separately."""
+    import stage5c_bridge
+
+    stage3_results = run_stage3(cur, 1, day_range=range(0, 25))
+    early = next(r for r in stage3_results if r.kpi_names == ["active_customers_purchased_30d"])
+    decomposition_result = run_stage4(cur, 1, early)
+
+    reference = stage5c_bridge.build_reference(cur, n_episodes=5)
+    fingerprint_result, cold_start_result = run_stage5a_and_5c(
+        cur, 1, early, decomposition_result, reference
+    )
+
+    assert fingerprint_result.cluster_id == cold_start_result.cluster_id == early.cluster_id
+    assert cold_start_result.attributions, "expected the thin region/segment slices to route to Stage 5c"
+    # active_customers_purchased_30d applies to both region and segment
+    # (dimension_config.DIMENSION_APPLICABILITY) -- eligibility is uniform per (kpi,
+    # dimension) across a window (this plan's Risk #1 finding), so both dimensions land
+    # LIMITED_HISTORY together here, not region alone.
+    assert all(a.dimension in ("region", "segment") for a in cold_start_result.attributions)
+
+
 if __name__ == "__main__":
     test_fingerprint_result_rejects_bad_confidence()
     test_fingerprint_result_rejects_unknown_event_type()
@@ -227,6 +284,8 @@ if __name__ == "__main__":
     test_product_concentration_fires_on_one_dominant_slice()
     test_product_concentration_returns_none_on_flat_slices()
     test_product_concentration_ignores_unmeasured_slices()
+    test_product_concentration_excludes_thin_slices()
+    test_product_concentration_still_fires_when_only_some_slices_are_thin()
     test_dominant_kpi_shift_customers_first()
     test_dominant_kpi_shift_orders_first()
     test_dominant_kpi_shift_none_when_everything_flat()
@@ -246,6 +305,7 @@ if __name__ == "__main__":
     try:
         with conn.cursor() as cur:
             test_run_stage5a_detects_inventory_shortage_on_a_real_episode(cur)
+            test_run_stage5a_and_5c_serves_a_cold_start_cluster(cur)
     finally:
         conn.close()
     print("OK")
