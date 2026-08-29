@@ -195,7 +195,9 @@ def test_short_trailing_history_gates_percentile_for_every_slice(cur):
 
 def test_run_stage4_covers_every_applicable_slice_and_allows_real_percentiles(cur):
     stage3_results = stage3_bridge_run_stage3(cur, day_range=range(80, 120))
-    late = next(r for r in stage3_results if r.kpi_names == ["revenue"])
+    # revenue arithmetically co-moves with orders_count/units_sold (same-day DAG edges), so
+    # since Task 5's real DAG it never clusters alone here -- match on membership, not shape.
+    late = next(r for r in stage3_results if "revenue" in r.kpi_names)
     assert late.window_start_day_offset >= 30, "expected a window with a real 30-day trailing history"
 
     result = run_stage4(cur, 1, late)
