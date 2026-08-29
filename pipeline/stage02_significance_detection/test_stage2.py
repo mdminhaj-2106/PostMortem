@@ -148,6 +148,25 @@ def test_timeline_cache_reuses_days_without_refetching(cur):
     ingest.clear_cache()
 
 
+def test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur):
+    """Scenario 2's interaction-based 'active' arrives at WEEKLY grain, carried forward
+    across six of every seven days. It must not be scored as confidently as exact daily
+    billing data -- that would be the system claiming precision it does not have, the
+    opposite of the abstention behaviour the rest of Stage 2 is built around.
+
+    Both must still be ANALYZED: coarse evidence is reported, just not trusted equally."""
+    days = range(40, 72)
+    weekly = run_stage2(cur, 8, "active_customers_interacted_30d", day_range=days)
+    daily = run_stage2(cur, 8, "active_customers_purchased_30d", day_range=days)
+
+    assert {r.analysis_status for r in weekly} == {"ANALYZED"}
+    assert {r.analysis_status for r in daily} == {"ANALYZED"}
+    assert {r.confidence for r in weekly} == {"LOW"}, \
+        "weekly-grain KPI must not inherit the confidence of exact daily data"
+    assert {r.confidence for r in daily} == {"HIGH"}, \
+        "daily-grain KPI regressed -- the imputation flag change leaked past the crm rows"
+
+
 def test_ingest_and_run_end_to_end(cur):
     for kpi in ingest.KPI_NAMES:
         results = run_stage2(cur, 1, kpi, day_range=range(0, 30))
@@ -200,6 +219,7 @@ if __name__ == "__main__":
     try:
         with conn.cursor() as cur:
             test_timeline_cache_reuses_days_without_refetching(cur)
+            test_weekly_grain_kpi_scores_lower_confidence_than_daily(cur)
             test_ingest_and_run_end_to_end(cur)
             test_scoring_reacts_to_a_real_injected_event(cur)
     finally:

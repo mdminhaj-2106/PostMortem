@@ -187,6 +187,31 @@ def test_scenario2_definitional_two_rows(cur):
             assert r.source_provenance == ["crm_system"]
 
 
+def test_weekly_snapshot_marks_carried_forward_days(cur):
+    """crm snapshots active_customers ONCE per ISO week; the other six days carry that
+    value forward. Declaring all seven 'untouched' made Stage 2 score a weekly metric at
+    HIGH history_confidence, identical to exact daily billing data, because eligibility
+    only inspects imputation_flag. Exactly one observed day per week, the rest flagged."""
+    cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
+    episode_id = cur.fetchone()[0]
+    start_date = _fetch_episode_start_date(cur, episode_id)
+
+    flags_by_day = {}
+    for day_offset in range(35, 56):  # three full ISO weeks
+        for r in reconcile_definitional_active_customers(cur, episode_id, day_offset, start_date):
+            if r.kpi_name == "active_customers_interacted_30d":
+                flags_by_day[day_offset] = r.imputation_flag
+
+    assert flags_by_day, "expected crm rows in this window"
+    observed = sorted(d for d, f in flags_by_day.items() if f == "untouched")
+    assert observed, "no day was marked as an actual observation"
+    assert all(f in ("untouched", "partially_imputed") for f in flags_by_day.values())
+    # snapshot days are exactly one ISO week apart
+    assert all(b - a == 7 for a, b in zip(observed, observed[1:])), observed
+    # and the carried-forward days dominate, which is what should cost it confidence
+    assert len(observed) < len(flags_by_day) / 2
+
+
 def test_scenario5_calendar_alignment(cur):
     cur.execute("SELECT episode_id FROM episodes ORDER BY episode_id LIMIT 1")
     episode_id = cur.fetchone()[0]
@@ -247,6 +272,7 @@ if __name__ == "__main__":
             test_scenario1_partial_gap_graceful(cur)
             test_scenario4_partial_gap_direct(cur)
             test_scenario2_definitional_two_rows(cur)
+            test_weekly_snapshot_marks_carried_forward_days(cur)
             test_scenario5_calendar_alignment(cur)
             test_scenario6_identity_flags(cur)
     finally:

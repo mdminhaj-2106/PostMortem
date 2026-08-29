@@ -15,6 +15,10 @@ CRITICALITY = {
     "orders_count": "HIGH",
     "avg_order_value": "MEDIUM",
     "units_sold": "MEDIUM",
+    # Scenario 2's interaction-based "active". MEDIUM, not HIGH: it is a leading/context
+    # signal (someone engaging without buying), deliberately NOT the same construct as
+    # the purchase-based count, and it arrives at weekly grain so it is coarser evidence.
+    "active_customers_interacted_30d": "MEDIUM",
 }
 
 

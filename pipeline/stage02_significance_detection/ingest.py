@@ -45,6 +45,12 @@ stage1_reconcile = _import_stage1_reconcile()
 KPI_NAMES = (
     "revenue",
     "active_customers_purchased_30d",
+    # Scenario 2's OTHER half. reconcile_definitional_active_customers has always
+    # computed this alongside the purchased-based one and ingest threw it away, so the
+    # definitional mismatch -- the entire point of Scenario 2, "keep both as separate
+    # features, never collapse them" -- never reached Stage 2. The divergence between
+    # interacted-but-not-purchasing and purchasing IS the signal, not noise to discard.
+    "active_customers_interacted_30d",
     "orders_count",
     "avg_order_value",
     "units_sold",

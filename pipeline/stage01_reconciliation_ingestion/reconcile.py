@@ -242,9 +242,18 @@ def reconcile_definitional_active_customers(cur, episode_id, day_offset, start_d
     week_bucket = calendar_dimension.bucket_day(day_offset, "iso_week", start_date)
     crm_val = _fetch_crm_weekly_active_customers(cur, episode_id, week_bucket)
     if crm_val is not None:
+        # crm snapshots ONCE per week, at week_start_day_offset. That day is a real
+        # observation; the other six carry it forward. Declaring all seven "untouched"
+        # made a weekly metric score HIGH history_confidence in Stage 2 -- identical to
+        # exact daily billing data -- because eligibility only inspects imputation_flag.
+        # Flagging the carried-forward days is what makes Stage 2 correctly treat this
+        # KPI as coarser evidence (it lands LOW_CONFIDENCE, so Stage 3 reports it but
+        # declines to RANK it against daily-grain KPIs).
+        is_snapshot_day = day_offset == week_bucket
         rows.append(ReconciledValue(
             episode_id=episode_id, day_offset=day_offset, kpi_name="active_customers_interacted_30d",
             value=crm_val, confidence_tier="aggregated", source_provenance=["crm_system"],
+            imputation_flag="untouched" if is_snapshot_day else "partially_imputed",
             imputation_method="calendar_bucketed_weekly_snapshot",
         ))
     return rows
