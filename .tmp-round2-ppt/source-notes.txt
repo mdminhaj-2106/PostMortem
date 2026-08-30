@@ -1,0 +1,6 @@
+Internal source material synthesized for this deck:
+- docs/00-brief-and-topology/round2-topology-and-brief.md
+- docs/01-architecture/architecture-report.md
+- docs/02-stage-design-reports/*.md
+
+No external assets or externally sourced factual claims are used in the deck.

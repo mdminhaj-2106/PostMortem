@@ -12,9 +12,49 @@ from types import SimpleNamespace
 from dotenv import load_dotenv
 
 import run_store
+from orchestrator import _top_slices, _trajectories_by_hypothesis
 from verification import _match_event, _overlap_days, score_run
 
 # --- offline ---
+
+
+def _slice(kpi_name, dimension, slice_value, deviation_pct, eligibility="ELIGIBLE",
+           observation_status="OBSERVED"):
+    return SimpleNamespace(
+        kpi_name=kpi_name, dimension=dimension, slice_value=slice_value,
+        deviation_pct=deviation_pct, eligibility=eligibility, observation_status=observation_status,
+    )
+
+
+def test_top_slices_excludes_unmeasured_and_caps_at_five():
+    slices = [_slice("revenue", "region", f"R{i}", float(i)) for i in range(10)]
+    slices.append(_slice("revenue", "region", "GAP", None, observation_status="NO_DATA_IN_WINDOW"))
+    result = _top_slices(SimpleNamespace(slices=slices))
+    assert len(result) == 5
+    assert all(s["slice_value"] != "GAP" for s in result)
+    assert [s["slice_value"] for s in result] == ["R9", "R8", "R7", "R6", "R5"]
+
+
+def _point(day_offset, observed=100.0, baseline=90.0, counterfactual=95.0, impact=5.0):
+    return SimpleNamespace(
+        day_offset=day_offset, observed_value=observed, baseline_value=baseline,
+        counterfactual_value=counterfactual, estimated_impact=impact,
+    )
+
+
+def _estimate(hypothesis_id, estimation_status, trajectory):
+    return SimpleNamespace(hypothesis_id=hypothesis_id, estimation_status=estimation_status, trajectory=trajectory)
+
+
+def test_trajectories_by_hypothesis_excludes_unestimated():
+    estimates = [
+        _estimate("h1", "ESTIMATED", [_point(1), _point(2)]),
+        _estimate("h2", "MECHANISM_UNAVAILABLE", []),
+    ]
+    result = _trajectories_by_hypothesis(estimates)
+    assert set(result.keys()) == {"h1"}
+    assert len(result["h1"]) == 2
+    assert result["h1"][0]["day_offset"] == 1
 
 
 def test_overlap_days():
@@ -119,6 +159,30 @@ def test_live_run_episode_15():
     verification_event = events[-1]
     print(f"  verification: {verification_event['summary']}")
 
+    stage4_event = next(e for e in events if e["stage"] == "stage4")
+    top_slices = stage4_event["summary"]["top_slices"]
+    assert len(top_slices) <= 5
+    assert all("slice_value" in s and "deviation_pct" in s for s in top_slices)
+
+    stage7_event = next(e for e in events if e["stage"] == "stage7")
+    hypotheses = stage7_event["summary"]["hypotheses"]
+    assert len(hypotheses) == stage7_event["summary"]["hypothesis_count"]
+    assert all(
+        {"hypothesis_id", "member_causes", "confidence_bucket", "rank", "evidence_count"} <= h.keys()
+        for h in hypotheses
+    )
+
+    stage8_event = next(e for e in events if e["stage"] == "stage8")
+    trajectories = stage8_event["summary"]["trajectories"]
+    assert isinstance(trajectories, dict)
+    for hyp_id, points in trajectories.items():
+        assert points, f"trajectory for {hyp_id} was empty"
+        assert "day_offset" in points[0] and "estimated_impact" in points[0]
+
+    stage9_event = next(e for e in events if e["stage"] == "stage9")
+    assert "primary_hypothesis_id" in stage9_event["summary"]
+    assert "impact_lower" in stage9_event["summary"] and "impact_upper" in stage9_event["summary"]
+
     narration_event = next(e for e in events if e["stage"] == "stage10_11")
     for persona, data in narration_event["summary"].items():
         assert data["narrative"], f"{persona} narrative was empty"
@@ -137,6 +201,8 @@ if __name__ == "__main__":
     test_score_run_top1_hit_when_ranked_first_matches()
     test_run_store_roundtrip()
     test_run_store_no_cluster_finishes_the_run()
+    test_top_slices_excludes_unmeasured_and_caps_at_five()
+    test_trajectories_by_hypothesis_excludes_unestimated()
 
     load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
     if not os.environ.get("DATABASE_URL"):
