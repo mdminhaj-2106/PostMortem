@@ -68,14 +68,19 @@ CREATE INDEX IF NOT EXISTS idx_orders_episode_day ON orders(episode_id, day_offs
 CREATE INDEX IF NOT EXISTS idx_orders_customer    ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_product     ON orders(product_id);
 
--- Atomic grain. Feeds daily_state.satisfaction generation and, later, Stage 6's evidence pipeline.
+-- Atomic grain. Feeds daily_state.satisfaction generation and Stage 6's evidence pipeline.
+-- text is nullable: only the small Stage 6 demo corpus (seed_stage6_evidence.py) gets real
+-- text, the existing 765K historical rows stay NULL, never retrofitted (see
+-- .claude/plans/stage6-evidence-retrieval.md's Scope/Out).
 CREATE TABLE IF NOT EXISTS support_tickets (
     ticket_id   INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     episode_id  INTEGER NOT NULL REFERENCES episodes(episode_id),
     day_offset  INTEGER NOT NULL,
     customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
-    category    TEXT NOT NULL CHECK (category IN ('bug','shipping','billing','other'))
+    category    TEXT NOT NULL CHECK (category IN ('bug','shipping','billing','other')),
+    text        TEXT
 );
+ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS text TEXT;
 CREATE INDEX IF NOT EXISTS idx_tickets_episode_day ON support_tickets(episode_id, day_offset);
 
 -- THE ANSWER KEY. Held out — the pipeline (Stage 1 onward) never queries this table;

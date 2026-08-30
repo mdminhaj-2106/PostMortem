@@ -42,7 +42,7 @@ erDiagram
 | `products` | 1 / product | `category`, `unit_cost`, `base_price` — Olist-bootstrapped |
 | `daily_state` | 1 / (episode, day) | latent driving variables: `marketing_spend`, `seasonality_factor`, `traffic`, `conversion_rate`, `product_reliability` (bounded [0.05, 1.0] — friction only pulls down from a 1.0 ideal), `satisfaction`, `competitor_activity`, `churn_rate`, `volatility_multiplier` |
 | `orders` | 1 / order (atomic) | `customer_id`, `product_id`, `quantity`, `unit_price` — revenue/AOV/orders-count all derive from here |
-| `support_tickets` | 1 / ticket (atomic) | `customer_id`, `category` |
+| `support_tickets` | 1 / ticket (atomic) | `customer_id`, `category`, `text` (nullable — `NULL` on all pre-existing rows, real only on Stage 6's small seeded demo corpus, see Migration note) |
 | `injected_events` | 0–N / episode | **the answer key, held out.** `event_type`, `severity`, `onset_type`, `start_day_offset`, `end_day_offset`, `mitigation_day_offset`/`mitigation_completeness`, `magnitude`, `segment_multiplier`, `affected_segment`, `affected_product_id`, `triggered_by_event_id` (self-FK, reactive chaining) |
 
 ## Layer 2 — observed sources (`pipeline/simulator/layer2_observed_sources/`)
@@ -67,6 +67,8 @@ erDiagram
 ## Migration/model note
 
 `customers.segment`'s CHECK constraint was migrated live once already (`SMB/Enterprise` → `New/Returning/VIP`) via `ALTER TABLE ... DROP/ADD CONSTRAINT` on the shared Neon DB, with stale test data truncated first. If a schema change is needed again on a **shared, already-populated** database: prefer `ALTER TABLE` over drop/recreate where possible, and always regenerate/re-verify against live data afterward — this project's real bugs were only ever caught that way, not by reading the code.
+
+`support_tickets.text` was added live the same way (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `.claude/plans/stage6-evidence-retrieval.md`) — nullable, all 764,537 pre-existing rows stay `NULL` (verified: `count(*) WHERE text IS NOT NULL` = 0 immediately after migration). Only `pipeline/simulator/layer1_ground_truth/seed_stage6_evidence.py` inserts real-text rows, for one demo episode at a time (episode 15 seeded with 188 rows for Stage 6's live test).
 
 ## Current live state (as of last generation run)
 
