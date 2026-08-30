@@ -11,6 +11,7 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocketDisconnect
 
 import run_store
@@ -19,6 +20,14 @@ from orchestrator import run_pipeline
 load_dotenv()
 
 app = FastAPI(title="PS3 Live Pipeline API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # One asyncio.Queue per in-flight run, so the WebSocket handler can await new events
 # without polling. Cleared once the run finishes (queue.put(None) is the close signal).

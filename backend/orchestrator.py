@@ -21,6 +21,39 @@ import telemetry  # noqa: E402
 sys.path.remove(_DEMO_DIR)
 
 
+def _top_slices(decomposition_result, cap=5):
+    """OBSERVED slices only, sorted by |deviation_pct| descending, capped -- same
+    selection narrate.py's build_fact_sheet already uses for top_slices."""
+    measured = [s for s in decomposition_result.slices if s.observation_status == "OBSERVED"]
+    top = sorted(measured, key=lambda s: abs(s.deviation_pct or 0), reverse=True)[:cap]
+    return [
+        {
+            "kpi_name": s.kpi_name, "dimension": s.dimension, "slice_value": s.slice_value,
+            "deviation_pct": s.deviation_pct, "eligibility": s.eligibility,
+        }
+        for s in top
+    ]
+
+
+def _trajectories_by_hypothesis(estimates):
+    """Real per-day trajectory, already computed (CounterfactualImpact.trajectory) --
+    keyed by hypothesis_id since Stage 9 (which picks the primary one) hasn't run yet
+    at this point in the stream. Only estimates with a real trajectory
+    (estimation_status == "ESTIMATED") are included -- MECHANISM_UNAVAILABLE/
+    UNAVAILABLE ones carry an empty trajectory, nothing to chart."""
+    return {
+        e.hypothesis_id: [
+            {
+                "day_offset": p.day_offset, "observed_value": p.observed_value,
+                "baseline_value": p.baseline_value, "counterfactual_value": p.counterfactual_value,
+                "estimated_impact": p.estimated_impact,
+            }
+            for p in e.trajectory
+        ]
+        for e in estimates if e.estimation_status == "ESTIMATED"
+    }
+
+
 def run_pipeline(cur, episode_id, use_llm=True):
     """Generator of event dicts. Terminates early (one event, status='no_cluster')
     if Stage 3 finds nothing -- a legitimate outcome (architecture.md's own critical
@@ -50,7 +83,10 @@ def run_pipeline(cur, episode_id, use_llm=True):
         decomposition_result = stage10_bridge.run_stage4(cur, episode_id, stage3_result)
     yield {
         "stage": "stage4", "status": "completed",
-        "summary": {"slice_count": len(decomposition_result.slices)},
+        "summary": {
+            "slice_count": len(decomposition_result.slices),
+            "top_slices": _top_slices(decomposition_result),
+        },
     }
 
     with telemetry.stage("stage5a_5c"):
@@ -102,6 +138,14 @@ def run_pipeline(cur, episode_id, use_llm=True):
             "abstained": stage7_result.abstained,
             "hypothesis_count": len(stage7_result.hypotheses),
             "top_hypothesis_id": stage7_result.hypotheses[0].hypothesis_id if stage7_result.hypotheses else None,
+            "hypotheses": [
+                {
+                    "hypothesis_id": h.hypothesis_id, "member_causes": h.member_causes,
+                    "confidence_bucket": h.confidence_bucket, "rank": h.rank,
+                    "evidence_count": h.evidence_count,
+                }
+                for h in stage7_result.hypotheses
+            ],
         },
     }
 
@@ -116,6 +160,7 @@ def run_pipeline(cur, episode_id, use_llm=True):
         "summary": {
             "abstained_upstream": stage8_result.abstained_upstream,
             "estimate_count": len(stage8_result.estimates),
+            "trajectories": _trajectories_by_hypothesis(stage8_result.estimates),
         },
     }
 
@@ -130,6 +175,10 @@ def run_pipeline(cur, episode_id, use_llm=True):
             "decision_status": stage9_result.decision_status,
             "action_type": primary.action_type if primary else None,
             "primary_owner": primary.primary_owner if primary else None,
+            "primary_hypothesis_id": primary.hypothesis_id if primary else None,
+            "expected_impact": primary.expected_impact if primary else None,
+            "impact_lower": primary.impact_lower if primary else None,
+            "impact_upper": primary.impact_upper if primary else None,
         },
     }
 
