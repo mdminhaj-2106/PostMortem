@@ -1,0 +1,12 @@
+psycopg2-binary
+python-dotenv
+numpy
+sentence-transformers
+spacy
+vaderSentiment
+google-genai
+
+# after `pip install -r requirements.txt`, also run (needed transitively by
+# Stage 6's own embedding_index.py, reached via stage9_bridge.py -> Stage 9 ->
+# Stage 8 -> Stage 7 -> Stage 6):
+#   python -m spacy download en_core_web_sm
