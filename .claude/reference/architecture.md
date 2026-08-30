@@ -36,7 +36,7 @@ Current-state summary. For the *why* behind any decision here, the linked design
 | Calendar Dimension | Partially — Stage 1's design report §3.2 | ✅ (as `stage01_reconciliation_ingestion/calendar_dimension.py`) | Not yet split out standalone |
 | Identity Resolution Graph | Partially — Stage 1's design report §3.3 | ✅ (as `stage01_reconciliation_ingestion/identity_resolution.py`, single-field scoring only — see plan Risk #2) | The one genuinely new cross-cutting component from Stage 1's design; not yet split out standalone |
 | Security/Decision Rights/Learning & Memory/Telemetry | ❌ | ❌ | Not yet designed |
-| FastAPI backend | Tech-stack decided | ❌ | |
+| FastAPI backend | Tech-stack decided | ✅ (first slice) | `backend/`: `GET /episodes`, `POST /runs`, `WS /ws/runs/{run_id}`, `GET /runs/{run_id}` -- live-orchestrates the real Stage 3-11 chain per episode (reusing `stage10_persona_narrative_routing`'s bridges one layer deeper via `backend/stage10_bridge.py`), streaming one real JSON event per stage as it completes, ending in a `verification.py` scoring event against that episode's held-out `injected_events`. Supersedes the older `/detect`/`/investigate`/`/story` endpoint shape from `docs/01-architecture/architecture-report.md` §8. `counterfactual_mae` stays `None` in this slice (no code anywhere re-derives Layer 1's true counterfactual with an event suppressed -- stated gap, not fabricated). `test_backend.py` passing offline + one live run, episode 15. See `docs/02-stage-design-reports/api-backend-orchestration-and-verification-design.md` and `.claude/plans/api-backend-orchestration-and-verification.md`. |
 | Next.js frontend | Tech-stack decided | ❌ | |
 
 ## Runtime architecture (once Stage 1+ exist)
