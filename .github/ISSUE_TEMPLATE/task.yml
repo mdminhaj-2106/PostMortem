@@ -1,0 +1,24 @@
+name: Task / chore
+description: Technical task, refactor, infrastructure, or process work.
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when
+      placeholder: "- [ ] "
+    validations:
+      required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      options: [simulator, pipeline, api, frontend, infra, docs, chore]
+    validations:
+      required: true

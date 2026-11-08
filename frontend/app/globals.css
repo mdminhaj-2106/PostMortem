@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens: Washi Paper Palette ─────────────────────────────────── */
+:root {
+  --paper:        #F6F1EA;
+  --paper-deep:   #EFE8DD;
+  --ink:          #2B2521;
+  --ink-muted:    #6B6156;
+  --ink-faint:    #A69B8C;
+  --border:       #E2D9CB;
+  --accent:       #B5533A;   /* terracotta — used ONLY for: active stage, top hypothesis, verdict, primary CTA */
+  --accent-soft:  #F1DCD2;
+
+  /* Type families (set via next/font CSS vars in layout.tsx) */
+  --font-serif:  var(--font-shippori, 'Shippori Mincho', Georgia, serif);
+  --font-sans:   var(--font-work-sans, 'Work Sans', system-ui, sans-serif);
+  --font-mono:   var(--font-ibm-mono, 'IBM Plex Mono', 'Courier New', monospace);
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Typography helpers ─────────────────────────────────────────────────── */
+.font-serif  { font-family: var(--font-serif); }
+.font-sans   { font-family: var(--font-sans); }
+.font-mono   { font-family: var(--font-mono); }
+
+h1, h2, h3  { font-family: var(--font-serif); font-weight: 600; line-height: 1.25; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: var(--paper-deep); }
+::-webkit-scrollbar-thumb        { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--ink-faint); }
+
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+::selection { background: var(--accent-soft); color: var(--ink); }
+
+/* ─── Dividers ───────────────────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+/* ─── Confidence buckets ─────────────────────────────────────────────────── */
+.bucket { display: inline-block; font-family: var(--font-mono); font-size: 11px;
+  padding: 2px 7px; border-radius: 2px; letter-spacing: 0.04em; font-weight: 500; }
+.bucket--high   { background: #E6F0E6; color: #2E5C2E; }
+.bucket--medium { background: #F5F0E0; color: #6B5B00; }
+.bucket--low    { background: var(--accent-soft); color: var(--accent); }
+
+/* ─── Stage Status dots ──────────────────────────────────────────────────── */
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--border);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dot--active    { background: var(--accent); }
+.dot--completed { background: var(--ink-muted); }
+.dot--skipped   { background: var(--border); opacity: 0.5; }
+
+/* ─── Card / surface ─────────────────────────────────────────────────────── */
+.surface {
+  background: var(--paper-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px 24px;
+}
+
+/* ─── GSAP animation targets — invisible until GSAP brings them in ───────── */
+.gsap-hidden { opacity: 0; }

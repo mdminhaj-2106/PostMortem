@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.db
+*.sqlite
+.DS_Store
+.olist_cache/
+.claude/scheduled_tasks.lock

@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+httpx           # only test_backend.py's TestClient needs this, not the served app itself
+psycopg2-binary
+python-dotenv
+numpy
+sentence-transformers
+spacy
+vaderSentiment
+google-genai
+
+# after `pip install -r requirements.txt`, also run (needed transitively by
+# Stage 6's own embedding_index.py, reached via stage10_bridge.py -> Stage 10 ->
+# 9 -> 8 -> 7 -> 6):
+#   python -m spacy download en_core_web_sm

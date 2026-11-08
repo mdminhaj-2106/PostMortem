@@ -1,0 +1,282 @@
+{"kind":"deck","id":"pr/y2skp6","name":"Deck"}
+{"kind":"layout","layoutId":"0c79621d-147e-45b7-86f2-a637feca8891","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"2f8210f6-40cb-4511-9ab8-36508eaf132d","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/mqjs8d","slide":1,"title":"AIC 2026 · PS3","textShapes":5}
+{"kind":"shape","id":"sh/d8juxs72","slide":1,"bbox":[0,0,1280,720]}
+{"kind":"shape","id":"sh/q5sbmx8b","slide":1,"bbox":[0,0,20,720]}
+{"kind":"textbox","id":"sh/r61cvipw","slide":1,"text":"AIC 2026 · PS3","textPreview":"AIC 2026 · PS3","textChars":14,"textLines":1,"bbox":[84,75,400,30]}
+{"kind":"textbox","id":"sh/0vads7qd","slide":1,"text":"BusinessIntelligence.ai","textPreview":"BusinessIntelligence.ai","textChars":23,"textLines":1,"bbox":[84,160,830,82]}
+{"kind":"textbox","id":"sh/1w3u1c7y","slide":1,"text":"A governed investigation engine that turns KPI movement into evidence-backed action — or clearly says when the evidence is not enough.","textPreview":"A governed investigation engine that turns KPI movement into evidence-backed action — or clearly says when the evidence is not enough.","textChars":134,"textLines":1,"bbox":[84,270,760,110]}
+{"kind":"shape","id":"sh/e9sbqx8n","slide":1,"bbox":[84,428,170,5]}
+{"kind":"textbox","id":"sh/fu1cz2p8","slide":1,"text":"ROUND 2 · Prototype Development","textPreview":"ROUND 2 · Prototype Development","textChars":31,"textLines":1,"bbox":[84,462,500,28]}
+{"kind":"shape","id":"sh/gzqtg3q9","slide":1,"bbox":[922,478,18,18]}
+{"kind":"shape","id":"sh/h0zup8ru","slide":1,"bbox":[980,420,22,22]}
+{"kind":"shape","id":"sh/xsjqt4ji","slide":1,"bbox":[1045,338,28,28]}
+{"kind":"shape","id":"sh/wra90zid","slide":1,"bbox":[1126,259,36,36]}
+{"kind":"shape","id":"sh/vq18ru1s","slide":1,"bbox":[920,486,214,3]}
+{"kind":"shape","id":"sh/apsryp07","slide":1,"bbox":[978,430,150,3]}
+{"kind":"shape","id":"sh/5w3qxoju","slide":1,"bbox":[1043,351,90,3]}
+{"kind":"textbox","id":"sh/kvu94ji9","slide":1,"text":"Signal → Evidence → Decision","textPreview":"Signal → Evidence → Decision","textChars":28,"textLines":1,"bbox":[838,548,350,32]}
+{"kind":"notes","id":"nt/mqjs8d","slide":1,"text":""}
+{"kind":"slide","id":"sl/gezlir","slide":2,"title":"THE ROUND 2 CHALLENGE","textShapes":15}
+{"kind":"textbox","id":"sh/9436x8vy","slide":2,"text":"THE ROUND 2 CHALLENGE","textPreview":"THE ROUND 2 CHALLENGE","textChars":21,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/m1c72tc7","slide":2,"text":"A KPI movement is not yet a decision.","textPreview":"A KPI movement is not yet a decision.","textChars":37,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/n2lovyds","slide":2,"text":"The prototype must reconcile imperfect sources, investigate likely drivers, communicate uncertainty, and route action to the right person.","textPreview":"The prototype must reconcile imperfect sources, investigate likely drivers, communicate uncertainty, and route action to the right person.","textChars":138,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/w7eps3u9","slide":2,"bbox":[72,250,338,260]}
+{"kind":"textbox","id":"sh/h8n618vu","slide":2,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[96,273,80,32]}
+{"kind":"textbox","id":"sh/u5c7qdc3","slide":2,"text":"Find material change","textPreview":"Find material change","textChars":20,"textLines":1,"bbox":[96,325,286,30]}
+{"kind":"textbox","id":"sh/v65ozido","slide":2,"text":"Separate normal variation from a signal worth investigating.","textPreview":"Separate normal variation from a signal worth investigating.","textChars":60,"textLines":1,"bbox":[96,360,286,55]}
+{"kind":"shape","id":"sh/4vepwnul","slide":2,"bbox":[457,250,338,260]}
+{"kind":"textbox","id":"sh/5wnq5sbq","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[481,273,80,32]}
+{"kind":"textbox","id":"sh/5032dg72","slide":2,"text":"Establish trustworthy facts","textPreview":"Establish trustworthy facts","textChars":27,"textLines":1,"bbox":[481,325,286,30]}
+{"kind":"textbox","id":"sh/4zu14v6h","slide":2,"text":"Resolve conflicting definitions, calendar cuts, gaps, and identities.","textPreview":"Resolve conflicting definitions, calendar cuts, gaps, and identities.","textChars":69,"textLines":1,"bbox":[481,360,286,55]}
+{"kind":"shape","id":"sh/jylkbqpw","slide":2,"bbox":[842,250,338,260]}
+{"kind":"textbox","id":"sh/ixsj2lob","slide":2,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[866,273,80,32]}
+{"kind":"textbox","id":"sh/t432h07y","slide":2,"text":"Turn evidence into action","textPreview":"Turn evidence into action","textChars":25,"textLines":1,"bbox":[866,325,286,30]}
+{"kind":"textbox","id":"sh/s3u18v6t","slide":2,"text":"Rank competing causes, quantify impact, and assign a decision owner.","textPreview":"Rank competing causes, quantify impact, and assign a decision owner.","textChars":68,"textLines":1,"bbox":[866,360,286,55]}
+{"kind":"textbox","id":"sh/r2lkfqp8","slide":2,"text":"The standard is not a better dashboard. It is a defensible path from noisy data to a governed business response.","textPreview":"The standard is not a better dashboard. It is a defensible path from noisy data to a governed business response.","textChars":112,"textLines":1,"bbox":[72,575,1080,48]}
+{"kind":"shape","id":"sh/61cj6lon","slide":2,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/98j25w7u","slide":2,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/87a1wb69","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/gezlir","slide":2,"text":""}
+{"kind":"slide","id":"sl/dntrv6","slide":3,"title":"CORE PRINCIPLE","textShapes":12}
+{"kind":"textbox","id":"sh/25cjux8f","slide":3,"text":"CORE PRINCIPLE","textPreview":"CORE PRINCIPLE","textChars":14,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/ps3ipc76","slide":3,"text":"The LLM never decides what is quantitatively true.","textPreview":"The LLM never decides what is quantitatively true.","textChars":50,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/o7u1w7ql","slide":3,"text":"Every number, confidence label, and recommendation is structured before narration begins.","textPreview":"Every number, confidence label, and recommendation is structured before narration begins.","textChars":89,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/bu5krmpc","slide":3,"bbox":[283,395,144,3]}
+{"kind":"shape","id":"sh/atcjyh8r","slide":3,"bbox":[562,395,144,3]}
+{"kind":"shape","id":"sh/xwn2tc72","slide":3,"bbox":[840,395,144,3]}
+{"kind":"shape","id":"sh/cve10rqh","slide":3,"bbox":[72,330,210,132]}
+{"kind":"textbox","id":"sh/ry10fips","slide":3,"text":"Observed\ndata","textPreview":"Observed | data","textChars":13,"textLines":2,"bbox":[90,359,174,65]}
+{"kind":"shape","id":"sh/qxsjmd87","slide":3,"bbox":[349,330,210,132]}
+{"kind":"textbox","id":"sh/s7e5gvex","slide":3,"text":"Statistical\n& causal models","textPreview":"Statistical | & causal models","textChars":27,"textLines":2,"bbox":[367,359,174,65]}
+{"kind":"shape","id":"sh/t876pgvi","slide":3,"bbox":[628,330,210,132]}
+{"kind":"textbox","id":"sh/65wnelwr","slide":3,"text":"Evidence\nresolution","textPreview":"Evidence | resolution","textChars":19,"textLines":2,"bbox":[646,359,174,65]}
+{"kind":"shape","id":"sh/765onqdc","slide":3,"bbox":[906,330,210,132]}
+{"kind":"textbox","id":"sh/gby5kve9","slide":3,"text":"LLM\nnarration","textPreview":"LLM | narration","textChars":13,"textLines":2,"bbox":[924,359,174,65]}
+{"kind":"textbox","id":"sh/hc76t0ve","slide":3,"text":"Trusted reasoning boundary","textPreview":"Trusted reasoning boundary","textChars":26,"textLines":1,"bbox":[72,500,375,30]}
+{"kind":"shape","id":"sh/u9gnilw3","slide":3,"bbox":[72,535,756,4]}
+{"kind":"textbox","id":"sh/faporqdo","slide":3,"text":"The LLM explains the investigation — it does not invent it.","textPreview":"The LLM explains the investigation — it does not invent it.","textChars":59,"textLines":1,"bbox":[72,561,760,38]}
+{"kind":"shape","id":"sh/wfu58rep","slide":3,"bbox":[872,513,336,92]}
+{"kind":"textbox","id":"sh/xg3mhwva","slide":3,"text":"If evidence is insufficient: abstain.","textPreview":"If evidence is insufficient: abstain.","textChars":37,"textLines":1,"bbox":[894,533,292,45]}
+{"kind":"shape","id":"sh/dcv2lsny","slide":3,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/cbmlcn6t","slide":3,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/badkji58","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/dntrv6","slide":3,"text":""}
+{"kind":"slide","id":"sl/qc49id","slide":4,"title":"SYSTEM TOPOLOGY","textShapes":23}
+{"kind":"textbox","id":"sh/kv21snih","slide":4,"text":"SYSTEM TOPOLOGY","textPreview":"SYSTEM TOPOLOGY","textChars":15,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/ju90zihw","slide":4,"text":"Eleven stages form one inspection-ready investigation.","textPreview":"Eleven stages form one inspection-ready investigation.","textChars":54,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/it0zqx0b","slide":4,"text":"Cross-cutting governance wraps the pipeline rather than appearing as a last-minute compliance layer.","textPreview":"Cross-cutting governance wraps the pipeline rather than appearing as a last-minute compliance layer.","textChars":100,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/xsrixsz6","slide":4,"bbox":[72,236,338,302]}
+{"kind":"shape","id":"sh/wrihonil","slide":4,"bbox":[94,257,58,30]}
+{"kind":"textbox","id":"sh/vq90vih0","slide":4,"text":"1–3","textPreview":"1–3","textChars":3,"textLines":1,"bbox":[94,258,58,26]}
+{"kind":"textbox","id":"sh/ap0zmd0f","slide":4,"text":"Trust the signal","textPreview":"Trust the signal","textChars":16,"textLines":1,"bbox":[94,305,286,36]}
+{"kind":"textbox","id":"sh/94rit8zu","slide":4,"text":"•  Reconcile sources","textPreview":"•  Reconcile sources","textChars":20,"textLines":1,"bbox":[94,357,290,29]}
+{"kind":"textbox","id":"sh/o3ihk3i9","slide":4,"text":"•  Classify change","textPreview":"•  Classify change","textChars":18,"textLines":1,"bbox":[94,394,290,29]}
+{"kind":"textbox","id":"sh/ytgvulsz","slide":4,"text":"•  Prioritize KPI clusters","textPreview":"•  Prioritize KPI clusters","textChars":26,"textLines":1,"bbox":[94,431,290,29]}
+{"kind":"shape","id":"sh/zupc3q94","slide":4,"bbox":[457,236,338,302]}
+{"kind":"shape","id":"sh/0vydwvap","slide":4,"bbox":[479,257,58,30]}
+{"kind":"textbox","id":"sh/lwru50ra","slide":4,"text":"4–7","textPreview":"4–7","textChars":3,"textLines":1,"bbox":[479,258,58,26]}
+{"kind":"textbox","id":"sh/qpgvqlsn","slide":4,"text":"Diagnose causes","textPreview":"Diagnose causes","textChars":15,"textLines":1,"bbox":[479,305,286,36]}
+{"kind":"textbox","id":"sh/bqpczq98","slide":4,"text":"•  Decompose dimensions","textPreview":"•  Decompose dimensions","textChars":23,"textLines":1,"bbox":[479,357,290,29]}
+{"kind":"textbox","id":"sh/crydsbat","slide":4,"text":"•  Fingerprint cause patterns","textPreview":"•  Fingerprint cause patterns","textChars":29,"textLines":1,"bbox":[479,394,290,29]}
+{"kind":"textbox","id":"sh/ds7u1gre","slide":4,"text":"•  Retrieve linked evidence","textPreview":"•  Retrieve linked evidence","textChars":27,"textLines":1,"bbox":[479,431,290,29]}
+{"kind":"textbox","id":"sh/21wvm1sr","slide":4,"text":"•  Resolve hypotheses","textPreview":"•  Resolve hypotheses","textChars":21,"textLines":1,"bbox":[479,468,290,29]}
+{"kind":"shape","id":"sh/325cv69c","slide":4,"bbox":[842,236,338,302]}
+{"kind":"shape","id":"sh/7u107ils","slide":4,"bbox":[864,257,58,30]}
+{"kind":"textbox","id":"sh/6tsjed47","slide":4,"text":"8–11","textPreview":"8–11","textChars":4,"textLines":1,"bbox":[864,258,58,26]}
+{"kind":"textbox","id":"sh/twji983y","slide":4,"text":"Make action usable","textPreview":"Make action usable","textChars":18,"textLines":1,"bbox":[864,305,286,36]}
+{"kind":"textbox","id":"sh/8va1g3md","slide":4,"text":"•  Quantify counterfactual","textPreview":"•  Quantify counterfactual","textChars":26,"textLines":1,"bbox":[864,357,290,29]}
+{"kind":"textbox","id":"sh/vi1kbilo","slide":4,"text":"•  Assemble recommendation","textPreview":"•  Assemble recommendation","textChars":26,"textLines":1,"bbox":[864,394,290,29]}
+{"kind":"textbox","id":"sh/uxsjid43","slide":4,"text":"•  Route by persona","textPreview":"•  Route by persona","textChars":19,"textLines":1,"bbox":[864,431,290,29]}
+{"kind":"textbox","id":"sh/hk32ds3u","slide":4,"text":"•  Narrate","textPreview":"•  Narrate","textChars":10,"textLines":1,"bbox":[864,468,290,29]}
+{"kind":"textbox","id":"sh/gju1knm9","slide":4,"text":"Shared services: Semantic contract · Security & access filter · Decision rights · Learning & memory · Telemetry & cost governor","textPreview":"Shared services: Semantic contract · Security & access filter · Decision rights · Learning & memory · Telemetry & cost governor","textChars":127,"textLines":1,"bbox":[72,580,1136,40]}
+{"kind":"shape","id":"sh/bmh0zylk","slide":4,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/a18j6t4z","slide":4,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/07mxgz2x","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/qc49id","slide":4,"text":""}
+{"kind":"slide","id":"sl/tbvulb","slide":5,"title":"TRUST BEGINS UPSTREAM","textShapes":20}
+{"kind":"textbox","id":"sh/tgzidkju","slide":5,"text":"TRUST BEGINS UPSTREAM","textPreview":"TRUST BEGINS UPSTREAM","textChars":21,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/6doji503","slide":5,"text":"One business fact may arrive as three inconsistent source records.","textPreview":"One business fact may arrive as three inconsistent source records.","textChars":66,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/7ex0ba1o","slide":5,"text":"Stage 1 makes uncertainty visible before it contaminates detection, diagnosis, or recommendations.","textPreview":"Stage 1 makes uncertainty visible before it contaminates detection, diagnosis, or recommendations.","textChars":98,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/gjq1ozi5","slide":5,"bbox":[72,250,190,132]}
+{"kind":"textbox","id":"sh/hkzihkjq","slide":5,"text":"Billing","textPreview":"Billing","textChars":7,"textLines":1,"bbox":[90,272,154,28]}
+{"kind":"textbox","id":"sh/uh8jmp0f","slide":5,"text":"Daily · UTC\nRevenue truth","textPreview":"Daily · UTC | Revenue truth","textChars":25,"textLines":2,"bbox":[90,310,154,46]}
+{"kind":"shape","id":"sh/fih0fu10","slide":5,"bbox":[302,250,190,132]}
+{"kind":"textbox","id":"sh/wnmhcvi1","slide":5,"text":"CRM","textPreview":"CRM","textChars":3,"textLines":1,"bbox":[320,272,154,28]}
+{"kind":"textbox","id":"sh/xofi50jm","slide":5,"text":"Weekly · account\nactivity","textPreview":"Weekly · account | activity","textChars":25,"textLines":2,"bbox":[320,310,154,46]}
+{"kind":"shape","id":"sh/14vqhszu","slide":5,"bbox":[532,250,190,132]}
+{"kind":"textbox","id":"sh/g3mp8ny9","slide":5,"text":"Marketing","textPreview":"Marketing","textChars":9,"textLines":1,"bbox":[550,272,154,28]}
+{"kind":"textbox","id":"sh/f2d8fiho","slide":5,"text":"Billing-cycle ·\nattributed revenue","textPreview":"Billing-cycle · | attributed revenue","textChars":34,"textLines":2,"bbox":[550,310,154,46]}
+{"kind":"shape","id":"sh/e1476xg3","slide":5,"bbox":[692,317,92,3]}
+{"kind":"textbox","id":"sh/p8fqlczq","slide":5,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[752,299,36,34]}
+{"kind":"shape","id":"sh/o76pc7y5","slide":5,"bbox":[826,244,382,150]}
+{"kind":"textbox","id":"sh/36x8j2hk","slide":5,"text":"Canonical, uncertainty-tagged timeline","textPreview":"Canonical, uncertainty-tagged timeline","textChars":38,"textLines":1,"bbox":[850,270,334,34]}
+{"kind":"textbox","id":"sh/25o7axgz","slide":5,"text":"semantic definitions · calendar alignment · identity resolution · materiality gates","textPreview":"semantic definitions · calendar alignment · identity resolution · materiality gates","textChars":83,"textLines":1,"bbox":[850,319,334,42]}
+{"kind":"textbox","id":"sh/dwfqpczm","slide":5,"text":"Conflict","textPreview":"Conflict","textChars":8,"textLines":1,"bbox":[72,455,130,30]}
+{"kind":"textbox","id":"sh/cb69g7yh","slide":5,"text":"check definition → correct declared bias → triangulate → decline if material/unresolved","textPreview":"check definition → correct declared bias → triangulate → decline if material/unresolved","textChars":87,"textLines":1,"bbox":[230,455,950,35]}
+{"kind":"textbox","id":"sh/wfe9cv6d","slide":5,"text":"Gap","textPreview":"Gap","textChars":3,"textLines":1,"bbox":[72,510,130,30]}
+{"kind":"textbox","id":"sh/xg7algny","slide":5,"text":"estimate only with uncertainty; protect downstream models from false confidence","textPreview":"estimate only with uncertainty; protect downstream models from false confidence","textChars":79,"textLines":1,"bbox":[230,510,950,35]}
+{"kind":"textbox","id":"sh/adwralo7","slide":5,"text":"Drift","textPreview":"Drift","textChars":5,"textLines":1,"bbox":[72,565,130,30]}
+{"kind":"textbox","id":"sh/be5sjq5s","slide":5,"text":"detect hidden definition changes and issue a visible restatement when needed","textPreview":"detect hidden definition changes and issue a visible restatement when needed","textChars":76,"textLines":1,"bbox":[230,565,950,35]}
+{"kind":"shape","id":"sh/k3ytgv6p","slide":5,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/l47ap0na","slide":5,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/yhgbeloj","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/tbvulb","slide":5,"text":""}
+{"kind":"slide","id":"sl/avr41p","slide":6,"title":"THE DIAGNOSTIC CORE","textShapes":25}
+{"kind":"textbox","id":"sh/m9o7258f","slide":6,"text":"THE DIAGNOSTIC CORE","textPreview":"THE DIAGNOSTIC CORE","textChars":19,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/9czqdkrq","slide":6,"text":"Movement becomes an explainable hypothesis — not a plausible-sounding story.","textPreview":"Movement becomes an explainable hypothesis — not a plausible-sounding story.","textChars":76,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/obqp4fq5","slide":6,"text":"Each stage constrains the next with observed data, model output, or evidence provenance.","textPreview":"Each stage constrains the next with observed data, model output, or evidence provenance.","textChars":88,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/beh8fu9w","slide":6,"bbox":[72,287,190,180]}
+{"kind":"textbox","id":"sh/ad876p8b","slide":6,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[90,307,42,24]}
+{"kind":"textbox","id":"sh/x0zqh4r2","slide":6,"text":"Detect","textPreview":"Detect","textChars":6,"textLines":1,"bbox":[90,345,154,28]}
+{"kind":"textbox","id":"sh/wfqp8zqh","slide":6,"text":"Normal / emerging / significant / structural","textPreview":"Normal / emerging / significant / structural","textChars":44,"textLines":1,"bbox":[90,387,154,54]}
+{"kind":"textbox","id":"sh/j218ju9s","slide":6,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[268,355,24,40]}
+{"kind":"shape","id":"sh/y1s7ap8n","slide":6,"bbox":[297,287,190,180]}
+{"kind":"textbox","id":"sh/svadsja1","slide":6,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[315,307,42,24]}
+{"kind":"textbox","id":"sh/dwjelorm","slide":6,"text":"Decompose","textPreview":"Decompose","textChars":9,"textLines":1,"bbox":[315,345,154,28]}
+{"kind":"textbox","id":"sh/qt8vq9sv","slide":6,"text":"Region · segment · product slices","textPreview":"Region · segment · product slices","textChars":33,"textLines":1,"bbox":[315,387,154,54]}
+{"kind":"textbox","id":"sh/ru1wje9g","slide":6,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[493,355,24,40]}
+{"kind":"shape","id":"sh/0zadw3ax","slide":6,"bbox":[522,287,190,180]}
+{"kind":"textbox","id":"sh/1kjepori","slide":6,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[540,307,42,24]}
+{"kind":"textbox","id":"sh/exsvuts7","slide":6,"text":"Fingerprint","textPreview":"Fingerprint","textChars":11,"textLines":1,"bbox":[540,345,154,28]}
+{"kind":"textbox","id":"sh/fy1wny9c","slide":6,"text":"Onset, spread, entropy, channel mix","textPreview":"Onset, spread, entropy, channel mix","textChars":35,"textLines":1,"bbox":[540,387,154,54]}
+{"kind":"textbox","id":"sh/onud03q9","slide":6,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[718,355,24,40]}
+{"kind":"shape","id":"sh/po3et8ru","slide":6,"bbox":[747,287,190,180]}
+{"kind":"textbox","id":"sh/x4zed8jy","slide":6,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[765,307,42,24]}
+{"kind":"textbox","id":"sh/wjqd43id","slide":6,"text":"Link evidence","textPreview":"Link evidence","textChars":13,"textLines":1,"bbox":[765,345,154,28]}
+{"kind":"textbox","id":"sh/bihwby1s","slide":6,"text":"CRM · tickets · reviews, time-tagged","textPreview":"CRM · tickets · reviews, time-tagged","textChars":36,"textLines":1,"bbox":[765,387,154,54]}
+{"kind":"textbox","id":"sh/ah8v2t07","slide":6,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[943,355,24,40]}
+{"kind":"shape","id":"sh/l8jeh8ju","slide":6,"bbox":[972,287,190,180]}
+{"kind":"textbox","id":"sh/k7qd83i9","slide":6,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[990,307,42,24]}
+{"kind":"textbox","id":"sh/j6hwfi1o","slide":6,"text":"Resolve","textPreview":"Resolve","textChars":7,"textLines":1,"bbox":[990,345,154,28]}
+{"kind":"textbox","id":"sh/y58v6d0j","slide":6,"text":"Known · likely · possible · unknown","textPreview":"Known · likely · possible · unknown","textChars":35,"textLines":1,"bbox":[990,387,154,54]}
+{"kind":"shape","id":"sh/1cfu5ojq","slide":6,"bbox":[72,535,1136,2]}
+{"kind":"textbox","id":"sh/0b6dwj25","slide":6,"text":"Evidence is filtered by entity scope and by whether it occurred before, during, or after the KPI change — a safeguard against confusing consequence with cause.","textPreview":"Evidence is filtered by entity scope and by whether it occurred before, during, or after the KPI change — a safeguard against confusing c...","textChars":159,"textLines":1,"bbox":[72,562,1136,45]}
+{"kind":"shape","id":"sh/qh4b6pg3","slide":6,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/ridsfuh8","slide":6,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/cjmt8fyt","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/avr41p","slide":6,"text":""}
+{"kind":"slide","id":"sl/76wtv4","slide":7,"title":"THE DIFFERENTIATOR","textShapes":12}
+{"kind":"textbox","id":"sh/ipkzap0b","slide":7,"text":"THE DIFFERENTIATOR","textPreview":"THE DIFFERENTIATOR","textChars":18,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/5sby54jm","slide":7,"text":"When causes overlap, do not force a top-one answer.","textPreview":"When causes overlap, do not force a top-one answer.","textChars":51,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/4r2hczih","slide":7,"text":"Stage 5b is an explicit confounded-cause branch: it attributes what is identifiable and preserves a joint component where it is not.","textPreview":"Stage 5b is an explicit confounded-cause branch: it attributes what is identifiable and preserves a joint component where it is not.","textChars":132,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/rutg7e1s","slide":7,"bbox":[72,248,510,270]}
+{"kind":"textbox","id":"sh/qtkze907","slide":7,"text":"The usual failure","textPreview":"The usual failure","textChars":17,"textLines":1,"bbox":[100,276,430,30]}
+{"kind":"textbox","id":"sh/dwvy9ojy","slide":7,"text":"“The cause is marketing.”","textPreview":"“The cause is marketing.”","textChars":25,"textLines":1,"bbox":[100,332,420,42]}
+{"kind":"textbox","id":"sh/svmhgjid","slide":7,"text":"A clean-sounding answer that can hide reliability, inventory, or competitive effects inside the same KPI movement.","textPreview":"A clean-sounding answer that can hide reliability, inventory, or competitive effects inside the same KPI movement.","textChars":114,"textLines":1,"bbox":[100,394,420,72]}
+{"kind":"shape","id":"sh/7y9gva1o","slide":7,"bbox":[696,248,512,270]}
+{"kind":"textbox","id":"sh/mx0f2503","slide":7,"text":"Our response","textPreview":"Our response","textChars":12,"textLines":1,"bbox":[724,276,430,30]}
+{"kind":"textbox","id":"sh/ojqh8j29","slide":7,"text":"Identifiable effects + shared uncertainty","textPreview":"Identifiable effects + shared uncertainty","textChars":41,"textLines":1,"bbox":[724,332,440,42]}
+{"kind":"textbox","id":"sh/pkzi1oju","slide":7,"text":"A route gate checks whether the data can support separate attribution. If not, the system reports a joint cause instead of fabricating a split.","textPreview":"A route gate checks whether the data can support separate attribution. If not, the system reports a joint cause instead of fabricating a ...","textChars":143,"textLines":1,"bbox":[724,394,440,72]}
+{"kind":"textbox","id":"sh/2h8z69k3","slide":7,"text":"Cold start is handled separately: borrow a matched analogue’s volatility profile and label confidence as borrowed, not native.","textPreview":"Cold start is handled separately: borrow a matched analogue’s volatility profile and label confidence as borrowed, not native.","textChars":126,"textLines":1,"bbox":[72,574,1136,34]}
+{"kind":"shape","id":"sh/3ih0ze1o","slide":7,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/c7ahcj25","slide":7,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/x8ji5ojq","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/76wtv4","slide":7,"text":""}
+{"kind":"slide","id":"sl/ro4alv","slide":8,"title":"DECISION QUALITY","textShapes":17}
+{"kind":"textbox","id":"sh/8zy1cjet","slide":8,"text":"DECISION QUALITY","textPreview":"DECISION QUALITY","textChars":16,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/nypkjex8","slide":8,"text":"Counterfactuals come before recommendations.","textPreview":"Counterfactuals come before recommendations.","textChars":44,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/mxwja9wn","slide":8,"text":"Stage 8 asks what the KPI would have been without the suspected event; Stage 9 turns that bounded result into an authorized action.","textPreview":"Stage 8 asks what the KPI would have been without the suspected event; Stage 9 turns that bounded result into an authorized action.","textChars":131,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/lwnih4fi","slide":8,"bbox":[72,268,324,238]}
+{"kind":"textbox","id":"sh/0ve18zex","slide":8,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[96,290,46,30]}
+{"kind":"textbox","id":"sh/zu50fuxc","slide":8,"text":"Observed","textPreview":"Observed","textChars":8,"textLines":1,"bbox":[96,340,270,34]}
+{"kind":"textbox","id":"sh/ytwj69wr","slide":8,"text":"A KPI moved; its change is decomposed and evidence-linked.","textPreview":"A KPI moved; its change is decomposed and evidence-linked.","textChars":58,"textLines":1,"bbox":[96,395,270,78]}
+{"kind":"shape","id":"sh/5sr2t8vm","slide":8,"bbox":[478,268,324,238]}
+{"kind":"textbox","id":"sh/kri1k3e1","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[502,290,46,30]}
+{"kind":"textbox","id":"sh/q9sjex4r","slide":8,"text":"Counterfactual","textPreview":"Counterfactual","textChars":14,"textLines":1,"bbox":[502,340,270,34]}
+{"kind":"textbox","id":"sh/ralk72lc","slide":8,"text":"Model a no-event trajectory, retain uncertainty, and abstain when mechanisms are unsupported.","textPreview":"Model a no-event trajectory, retain uncertainty, and abstain when mechanisms are unsupported.","textChars":93,"textLines":1,"bbox":[502,395,270,78]}
+{"kind":"shape","id":"sh/sbu1g7mx","slide":8,"bbox":[884,268,324,238]}
+{"kind":"textbox","id":"sh/dc329c3i","slide":8,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[908,290,46,30]}
+{"kind":"textbox","id":"sh/ilsjax4v","slide":8,"text":"Decision","textPreview":"Decision","textChars":8,"textLines":1,"bbox":[908,340,270,34]}
+{"kind":"textbox","id":"sh/3m1032l0","slide":8,"text":"Map driver → lever → action → owner → monitoring plan, respecting decision rights.","textPreview":"Map driver → lever → action → owner → monitoring plan, respecting decision rights.","textChars":82,"textLines":1,"bbox":[908,395,270,78]}
+{"kind":"shape","id":"sh/4na1cnml","slide":8,"bbox":[396,385,65,3]}
+{"kind":"shape","id":"sh/5oj25s36","slide":8,"bbox":[802,385,65,3]}
+{"kind":"textbox","id":"sh/2hwjmh4z","slide":8,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[425,366,30,35]}
+{"kind":"textbox","id":"sh/ni5kfmlk","slide":8,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[831,366,30,35]}
+{"kind":"textbox","id":"sh/zmxg7e1w","slide":8,"text":"The recommendation cannot rewrite the diagnosis. It can only select a feasible, compatible response to it.","textPreview":"The recommendation cannot rewrite the diagnosis. It can only select a feasible, compatible response to it.","textChars":106,"textLines":1,"bbox":[72,563,1136,40]}
+{"kind":"shape","id":"sh/yloze9kb","slide":8,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/lofy9oj2","slide":8,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/kn6hgj2h","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/ro4alv","slide":8,"text":""}
+{"kind":"slide","id":"sl/wtsfzs","slide":9,"title":"GOVERNED BY DESIGN","textShapes":20}
+{"kind":"textbox","id":"sh/1gzypwby","slide":9,"text":"GOVERNED BY DESIGN","textPreview":"GOVERNED BY DESIGN","textChars":18,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/edoze1s7","slide":9,"text":"Trust, access, action rights, learning, and cost control are product behavior.","textPreview":"Trust, access, action rights, learning, and cost control are product behavior.","textChars":78,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/fexgn6ts","slide":9,"text":"These controls are consulted throughout the pipeline, not appended as a policy slide.","textPreview":"These controls are consulted throughout the pipeline, not appended as a policy slide.","textChars":85,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/sb6hcra1","slide":9,"bbox":[72,249,198,266]}
+{"kind":"textbox","id":"sh/tcfylwbm","slide":9,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[90,269,42,26]}
+{"kind":"textbox","id":"sh/69ofahsb","slide":9,"text":"Security & access","textPreview":"Security & access","textChars":17,"textLines":1,"bbox":[90,314,162,55]}
+{"kind":"textbox","id":"sh/raxgjmtg","slide":9,"text":"Row / column / domain filtering determines what a person may see.","textPreview":"Row / column / domain filtering determines what a person may see.","textChars":65,"textLines":1,"bbox":[90,390,162,91]}
+{"kind":"shape","id":"sh/4n6x87a5","slide":9,"bbox":[298,249,198,266]}
+{"kind":"textbox","id":"sh/5ofyhcbq","slide":9,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[316,269,42,26]}
+{"kind":"textbox","id":"sh/lsnahsz2","slide":9,"text":"Decision rights","textPreview":"Decision rights","textChars":15,"textLines":1,"bbox":[316,314,162,55]}
+{"kind":"textbox","id":"sh/0rut8nih","slide":9,"text":"Seeing a recommendation is distinct from being authorized to act on it.","textPreview":"Seeing a recommendation is distinct from being authorized to act on it.","textChars":71,"textLines":1,"bbox":[316,390,162,91]}
+{"kind":"shape","id":"sh/zqlsfihw","slide":9,"bbox":[524,249,198,266]}
+{"kind":"textbox","id":"sh/y5cb6d0b","slide":9,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[542,269,42,26]}
+{"kind":"textbox","id":"sh/d43ad8z6","slide":9,"text":"Persona routing","textPreview":"Persona routing","textChars":15,"textLines":1,"bbox":[542,314,162,55]}
+{"kind":"textbox","id":"sh/c3ut43il","slide":9,"text":"Executives, analysts, and operators receive different decisions and depth — not merely shorter copy.","textPreview":"Executives, analysts, and operators receive different decisions and depth — not merely shorter copy.","textChars":100,"textLines":1,"bbox":[542,390,162,91]}
+{"kind":"shape","id":"sh/b2lsby10","slide":9,"bbox":[750,249,198,266]}
+{"kind":"textbox","id":"sh/q1cb2t0f","slide":9,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[768,269,42,26]}
+{"kind":"textbox","id":"sh/p03a9oju","slide":9,"text":"Learning & memory","textPreview":"Learning & memory","textChars":17,"textLines":1,"bbox":[768,314,162,55]}
+{"kind":"textbox","id":"sh/ozat03i9","slide":9,"text":"Analyst corrections become reusable investigation history and future training data.","textPreview":"Analyst corrections become reusable investigation history and future training data.","textChars":83,"textLines":1,"bbox":[768,390,162,91]}
+{"kind":"shape","id":"sh/gvy1cnuh","slide":9,"bbox":[976,249,198,266]}
+{"kind":"textbox","id":"sh/1w725sv2","slide":9,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[994,269,42,26]}
+{"kind":"textbox","id":"sh/etgjaxcb","slide":9,"text":"Cost governor","textPreview":"Cost governor","textChars":13,"textLines":1,"bbox":[994,314,162,55]}
+{"kind":"textbox","id":"sh/fupk3idw","slide":9,"text":"Telemetry tracks latency, calls, and tokens; cheap methods route work before expensive model calls.","textPreview":"Telemetry tracks latency, calls, and tokens; cheap methods route work before expensive model calls.","textChars":99,"textLines":1,"bbox":[994,390,162,91]}
+{"kind":"shape","id":"sh/sry18nu5","slide":9,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/ts721svq","slide":9,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/6pwj6dcf","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/wtsfzs","slide":9,"text":""}
+{"kind":"slide","id":"sl/8dtlik","slide":10,"title":"PROTOTYPE PROOF","textShapes":29}
+{"kind":"textbox","id":"sh/axcjilsf","slide":10,"text":"PROTOTYPE PROOF","textPreview":"PROTOTYPE PROOF","textChars":15,"textLines":1,"bbox":[72,42,700,24]}
+{"kind":"textbox","id":"sh/x032d0b6","slide":10,"text":"The simulator turns “AI insight” into testable engineering.","textPreview":"The simulator turns “AI insight” into testable engineering.","textChars":59,"textLines":1,"bbox":[72,77,1136,58]}
+{"kind":"textbox","id":"sh/wzu1kval","slide":10,"text":"Synthetic episodes inject known causes, confounded events, and pure noise — while the live pipeline only sees degraded observed sources.","textPreview":"Synthetic episodes inject known causes, confounded events, and pure noise — while the live pipeline only sees degraded observed sources.","textChars":136,"textLines":1,"bbox":[72,140,1060,38]}
+{"kind":"shape","id":"sh/na1k76t4","slide":10,"bbox":[72,260,198,160]}
+{"kind":"textbox","id":"sh/m9sjelsj","slide":10,"text":"Generate","textPreview":"Generate","textChars":8,"textLines":1,"bbox":[88,283,166,29]}
+{"kind":"textbox","id":"sh/9c329gbu","slide":10,"text":"Ground truth: events, causal chains, volatility regimes","textPreview":"Ground truth: events, causal chains, volatility regimes","textChars":55,"textLines":1,"bbox":[88,330,166,61]}
+{"kind":"textbox","id":"sh/8bu1gbap","slide":10,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[270,316,28,38]}
+{"kind":"shape","id":"sh/z61036ts","slide":10,"bbox":[298,260,198,160]}
+{"kind":"textbox","id":"sh/y5sja1s7","slide":10,"text":"Degrade","textPreview":"Degrade","textChars":7,"textLines":1,"bbox":[314,283,166,29]}
+{"kind":"textbox","id":"sh/kbapsjul","slide":10,"text":"Observed sources: lags, gaps, conflicting values, misaligned calendars","textPreview":"Observed sources: lags, gaps, conflicting values, misaligned calendars","textChars":70,"textLines":1,"bbox":[314,330,166,61]}
+{"kind":"textbox","id":"sh/5cjq14v6","slide":10,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[496,316,28,38]}
+{"kind":"shape","id":"sh/ips7q9cf","slide":10,"bbox":[524,260,198,160]}
+{"kind":"textbox","id":"sh/ja1ozed0","slide":10,"text":"Train","textPreview":"Train","textChars":5,"textLines":1,"bbox":[540,283,166,29]}
+{"kind":"textbox","id":"sh/wnqpozu9","slide":10,"text":"Significance and fingerprint models on labeled episodes","textPreview":"Significance and fingerprint models on labeled episodes","textChars":55,"textLines":1,"bbox":[540,330,166,61]}
+{"kind":"textbox","id":"sh/xoj6x4vu","slide":10,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[722,316,28,38]}
+{"kind":"shape","id":"sh/al87mpcj","slide":10,"bbox":[750,260,198,160]}
+{"kind":"textbox","id":"sh/vmhovudo","slide":10,"text":"Hold out","textPreview":"Hold out","textChars":8,"textLines":1,"bbox":[766,283,166,29]}
+{"kind":"textbox","id":"sh/gjup03ut","slide":10,"text":"Run the full pipeline without exposing the answer key","textPreview":"Run the full pipeline without exposing the answer key","textChars":53,"textLines":1,"bbox":[766,330,166,61]}
+{"kind":"textbox","id":"sh/hk3q98ve","slide":10,"text":"›","textPreview":"›","textChars":1,"textLines":1,"bbox":[948,316,28,38]}
+{"kind":"shape","id":"sh/p0z6doni","slide":10,"bbox":[976,260,198,160]}
+{"kind":"textbox","id":"sh/ozqpkjmx","slide":10,"text":"Score","textPreview":"Score","textChars":5,"textLines":1,"bbox":[992,283,166,29]}
+{"kind":"textbox","id":"sh/3yhoby5c","slide":10,"text":"Compare output to truth and show the failure modes","textPreview":"Compare output to truth and show the failure modes","textChars":50,"textLines":1,"bbox":[992,330,166,61]}
+{"kind":"textbox","id":"sh/2x87it4r","slide":10,"text":"Detection","textPreview":"Detection","textChars":9,"textLines":1,"bbox":[72,500,198,27]}
+{"kind":"textbox","id":"sh/1wz69on6","slide":10,"text":"precision / recall by change class","textPreview":"precision / recall by change class","textChars":34,"textLines":1,"bbox":[72,531,198,40]}
+{"kind":"textbox","id":"sh/gvqpgjml","slide":10,"text":"Diagnosis","textPreview":"Diagnosis","textChars":9,"textLines":1,"bbox":[298,500,198,27]}
+{"kind":"textbox","id":"sh/faho7e50","slide":10,"text":"root-cause top-1 and top-3 accuracy","textPreview":"root-cause top-1 and top-3 accuracy","textChars":35,"textLines":1,"bbox":[298,531,198,40]}
+{"kind":"textbox","id":"sh/e9o7e94v","slide":10,"text":"Honesty","textPreview":"Honesty","textChars":7,"textLines":1,"bbox":[524,500,198,27]}
+{"kind":"textbox","id":"sh/t8f654na","slide":10,"text":"false-causality rate on noise episodes","textPreview":"false-causality rate on noise episodes","textChars":38,"textLines":1,"bbox":[524,531,198,40]}
+{"kind":"textbox","id":"sh/s76pczmp","slide":10,"text":"Impact","textPreview":"Impact","textChars":6,"textLines":1,"bbox":[750,500,198,27]}
+{"kind":"textbox","id":"sh/id43m5kn","slide":10,"text":"counterfactual MAE versus simulated truth","textPreview":"counterfactual MAE versus simulated truth","textChars":41,"textLines":1,"bbox":[750,531,198,40]}
+{"kind":"textbox","id":"sh/jed4fals","slide":10,"text":"Calibration","textPreview":"Calibration","textChars":11,"textLines":1,"bbox":[976,500,198,27]}
+{"kind":"textbox","id":"sh/4fm5of2d","slide":10,"text":"do confidence labels match outcomes?","textPreview":"do confidence labels match outcomes?","textChars":36,"textLines":1,"bbox":[976,531,198,40]}
+{"kind":"shape","id":"sh/5gvmhk3y","slide":10,"bbox":[72,674,1136,1]}
+{"kind":"textbox","id":"sh/u9k3i5kb","slide":10,"text":"AIC 2026 · BusinessIntelligence.ai · Round 2","textPreview":"AIC 2026 · BusinessIntelligence.ai · Round 2","textChars":44,"textLines":1,"bbox":[72,681,500,20]}
+{"kind":"textbox","id":"sh/vat4balw","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1154,681,54,20]}
+{"kind":"notes","id":"nt/8dtlik","slide":10,"text":""}
+{"kind":"slide","id":"sl/rmlv1z","slide":11,"title":"ROUND 2 PROPOSITION","textShapes":8}
+{"kind":"shape","id":"sh/yh4fq5kz","slide":11,"bbox":[0,0,1280,720]}
+{"kind":"shape","id":"sh/l4fy10jq","slide":11,"bbox":[0,0,20,720]}
+{"kind":"textbox","id":"sh/k3mxsv25","slide":11,"text":"ROUND 2 PROPOSITION","textPreview":"ROUND 2 PROPOSITION","textChars":19,"textLines":1,"bbox":[84,74,450,28]}
+{"kind":"textbox","id":"sh/bedwvq1o","slide":11,"text":"A decision system that earns the right to speak.","textPreview":"A decision system that earns the right to speak.","textChars":48,"textLines":1,"bbox":[84,143,930,78]}
+{"kind":"textbox","id":"sh/ad4fmlk3","slide":11,"text":"It reconciles data before trusting it, makes causality explicit before recommending action, and abstains when the evidence does not support a conclusion.","textPreview":"It reconciles data before trusting it, makes causality explicit before recommending action, and abstains when the evidence does not suppo...","textChars":153,"textLines":1,"bbox":[84,264,830,80]}
+{"kind":"shape","id":"sh/xgvex0ju","slide":11,"bbox":[88,410,18,18]}
+{"kind":"textbox","id":"sh/wfmxov29","slide":11,"text":"Live, judge-directed investigation","textPreview":"Live, judge-directed investigation","textChars":34,"textLines":1,"bbox":[126,398,740,40]}
+{"kind":"shape","id":"sh/natwr61c","slide":11,"bbox":[88,472,18,18]}
+{"kind":"textbox","id":"sh/m9kfilk7","slide":11,"text":"Inspectable evidence and uncertainty trail","textPreview":"Inspectable evidence and uncertainty trail","textChars":42,"textLines":1,"bbox":[126,460,740,40]}
+{"kind":"shape","id":"sh/0ril03md","slide":11,"bbox":[88,534,18,18]}
+{"kind":"textbox","id":"sh/1sbmt83y","slide":11,"text":"Action routed to the person who can actually decide","textPreview":"Action routed to the person who can actually decide","textChars":51,"textLines":1,"bbox":[126,522,740,40]}
+{"kind":"shape","id":"sh/ep03yd4n","slide":11,"bbox":[84,625,1124,1]}
+{"kind":"textbox","id":"sh/zq94ril8","slide":11,"text":"BusinessIntelligence.ai · From KPI movement to governed action","textPreview":"BusinessIntelligence.ai · From KPI movement to governed action","textChars":62,"textLines":1,"bbox":[84,642,840,30]}
+{"kind":"textbox","id":"sh/cnilw3mh","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1154,642,54,30]}
+{"kind":"notes","id":"nt/rmlv1z","slide":11,"text":""}
